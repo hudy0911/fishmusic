@@ -685,7 +685,6 @@ const limitOwnerDestroyRoom = createRateLimiter({ windowMs: 60_000, max: 3 });
 const limitErrorReport = createRateLimiter({ windowMs: 10 * 60_000, max: 5 });
 const limitSessionBootstrap = createRateLimiter({ windowMs: 60_000, max: 90 });
 const limitNewSessionBootstrap = createRateLimiter({ windowMs: 60_000, max: 45 });
-const limitLinuxdoAuth = createRateLimiter({ windowMs: 60_000, max: 10 });
 const limitGithubAuth = createRateLimiter({ windowMs: 60_000, max: 10 });
 const limitWechatUinAuth = createRateLimiter({ windowMs: 10 * 60_000, max: 10 });
 const socketRateLog = createLogger('socket-rate-limit');
@@ -2090,9 +2089,6 @@ app.get(['/api/auth/linuxdo/status', '/api/auth/moyu/status'], async (req, res) 
 
 app.get(['/api/auth/linuxdo/start', '/api/auth/moyu/start'], (req, res) => {
   if (!isLinuxdoConfigured()) return res.status(400).json({ error: '摸鱼岛登录未配置' });
-  if (!limitLinuxdoAuth(`linuxdo-start:${getRequestIp(req)}`)) {
-    return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
-  }
 
   const purpose = req.query?.purpose === 'recover' ? 'recover' : (req.query?.purpose === 'login' ? 'login' : 'bind');
   const returnPath = sanitizeReturnPath(req.query?.returnPath);
@@ -2125,9 +2121,6 @@ app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, r
   const fail = (returnPath, reason) => res.redirect(`${sanitizeReturnPath(returnPath)}?linuxdo=${reason}`);
 
   if (!isLinuxdoConfigured()) return fail('/', 'error');
-  if (!limitLinuxdoAuth(`linuxdo-callback:${getRequestIp(req)}`)) {
-    return res.status(429).send('请求过于频繁，请稍后再试');
-  }
 
   const state = verifyLinuxdoState(req.query?.state);
   if (!state) return fail('/', 'error');
