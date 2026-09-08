@@ -226,7 +226,7 @@ export default function TvDisplay() {
   }
 
   return (
-    <div ref={containerRef} className="h-full w-full bg-[#080808]">
+    <div ref={containerRef} className="om-force-dark h-full w-full bg-[#080808]">
       <AudioEngine tvMode />
       {!isFullscreen && room && !joinError && (
         <Tooltip content="全屏">

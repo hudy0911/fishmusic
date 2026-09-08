@@ -37,6 +37,7 @@ import BorderGlow from '../components/react-bits/BorderGlow';
 import { getRememberedAdminEntryPath } from '../lib/adminEntryShortcut';
 import { markGuideFeatureUsed } from '../lib/userGuide';
 import { useSiteFeaturesStore } from '../stores/siteFeaturesStore';
+import ThemeToggle from '../components/ThemeToggle';
 import type { MusicAccountPlatform } from '../lib/musicAccountQr';
 import { fetchDonations, type DonationEntry } from '../lib/donations';
 
@@ -295,11 +296,11 @@ function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+        className="home-dialog-mask absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity"
         onClick={onClose}
         aria-label="关闭"
       />
-      <div className="relative w-full max-w-md bg-[#111111]/90 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-2xl p-7 animate-fade-in">
+      <div className="relative w-full max-w-md bg-netease-bg/95 backdrop-blur-xl rounded-[32px] border border-netease-border shadow-2xl p-7 animate-fade-in">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
           <button
@@ -687,6 +688,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
+            <ThemeToggle />
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Tooltip content="支持摸鱼音乐">
                 <a href="https://yucoder.cn/rank/reward" target="_blank" rel="noopener noreferrer" className={`hidden sm:inline-flex ${headerPillCls}`} aria-label="支持摸鱼音乐">
@@ -741,6 +743,7 @@ export default function Home() {
               <ShinyText
                 text="多人实时同步 · 边听边聊"
                 speed={5.8}
+                className="home-hero-shiny"
                 color="rgba(255,255,255,0.58)"
                 shineColor="rgba(255,255,255,0.95)"
               />
@@ -1099,7 +1102,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={actionLoading}
-              className="w-full flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-200 disabled:opacity-50 font-bold py-4 rounded-2xl transition-all mt-2"
+              className="w-full flex items-center justify-center gap-2 bg-netease-red text-white hover:bg-netease-red/85 disabled:opacity-50 font-bold py-4 rounded-2xl transition-all mt-2"
             >
               {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
               开启音乐之旅
@@ -1166,7 +1169,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={actionLoading}
-              className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/10 disabled:opacity-50 text-white font-bold py-4 rounded-2xl transition-all mt-2"
+              className="w-full flex items-center justify-center gap-2 bg-netease-red text-white hover:bg-netease-red/85 border border-netease-red/70 disabled:opacity-50 font-bold py-4 rounded-2xl transition-all mt-2"
             >
               {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
               立即加入

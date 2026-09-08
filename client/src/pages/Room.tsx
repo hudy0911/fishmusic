@@ -80,6 +80,7 @@ import Toast from '../components/Toast';
 import QueueSystemToast from '../components/QueueSystemToast';
 import Tooltip from '../components/Tooltip';
 import RoomThemeColorPicker from '../components/RoomThemeColorPicker';
+import ThemeToggle from '../components/ThemeToggle';
 import UserRoleMarks from '../components/UserRoleMarks';
 import { getRecentRoomIds, rememberRoomVisit } from '../lib/recentRooms';
 import { sortRoomSwitcherRooms } from '../lib/roomSwitcher';
@@ -2680,7 +2681,7 @@ export default function Room() {
       </div>
     )}>
     <div
-      className={`room-ambient-root relative isolate flex h-full flex-col overflow-hidden ${
+      className={`room-ambient-root relative isolate flex h-full flex-col overflow-hidden ${immersiveMode ? 'om-force-dark' : ''} ${
         ambientBackgroundRetained ? 'room-ambient-root--transparent' : ''
       }`}
       style={immersiveTransition || immersiveShellMotion ? immersiveTimingCssVars() : undefined}
@@ -3159,6 +3160,8 @@ export default function Room() {
               )}
 
               <RoomThemeColorPicker />
+
+              <ThemeToggle />
 
               {!isMobileDevice() && (
               <Tooltip side="bottom" content={pureMode ? '退出纯净模式（电脑端右侧滑入聊天）' : '纯净模式：隐藏动效与热榜，保留搜索与播放队列；标签页低调伪装'}>
