@@ -98,7 +98,7 @@ const RUNTIME_FIELD_GROUPS: RuntimeFieldGroup[] = [
     fields: [
       { key: 'yucoderClientId', label: 'Client ID' },
       { key: 'yucoderClientSecret', label: 'Client Secret', secret: true },
-      { key: 'yucoderRedirectUri', label: '回调地址', placeholder: 'https://你的域名/api/auth/linuxdo/callback', tip: '须与摸鱼岛应用登记一致' },
+      { key: 'yucoderRedirectUri', label: '回调地址', placeholder: 'https://你的域名/api/auth/moyu/callback', tip: '须与摸鱼岛应用登记一致' },
       { key: 'yucoderScope', label: 'Scope', placeholder: 'read' },
     ],
   },

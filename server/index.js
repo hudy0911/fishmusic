@@ -2078,7 +2078,7 @@ app.post('/api/session/bootstrap', async (req, res) => {
 // 只影响“把当前浏览器身份绑定到一个 Linux.do 账号”这件事，不改变匿名创建/加入房间的既有流程；
 // 不登录 Linux.do 完全不受影响。持久化只写 Redis（server/linuxdoAuth.js）。
 
-app.get('/api/auth/linuxdo/status', async (req, res) => {
+app.get(['/api/auth/linuxdo/status', '/api/auth/moyu/status'], async (req, res) => {
   const enabled = isLinuxdoConfigured();
   if (!enabled) return res.json({ enabled: false, bound: null });
 
@@ -2088,7 +2088,7 @@ app.get('/api/auth/linuxdo/status', async (req, res) => {
   res.json({ enabled, bound });
 });
 
-app.get('/api/auth/linuxdo/start', (req, res) => {
+app.get(['/api/auth/linuxdo/start', '/api/auth/moyu/start'], (req, res) => {
   if (!isLinuxdoConfigured()) return res.status(400).json({ error: '摸鱼岛登录未配置' });
   if (!limitLinuxdoAuth(`linuxdo-start:${getRequestIp(req)}`)) {
     return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
@@ -2116,7 +2116,7 @@ app.get('/api/auth/linuxdo/start', (req, res) => {
   res.redirect(buildLinuxdoAuthorizeUrl(state));
 });
 
-app.get('/api/auth/linuxdo/callback', async (req, res) => {
+app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, res) => {
   const fail = (returnPath, reason) => res.redirect(`${sanitizeReturnPath(returnPath)}?linuxdo=${reason}`);
 
   if (!isLinuxdoConfigured()) return fail('/', 'error');
@@ -2173,7 +2173,7 @@ app.get('/api/auth/linuxdo/callback', async (req, res) => {
   return fail(returnPath, 'recovered');
 });
 
-app.post('/api/auth/linuxdo/unbind', async (req, res) => {
+app.post(['/api/auth/linuxdo/unbind', '/api/auth/moyu/unbind'], async (req, res) => {
   const identity = requireSessionIdentity(req, res);
   if (!identity) return;
   await unbindLinuxdoForUser(identity.userId, String(req.body?.roomId || '').trim().toUpperCase());

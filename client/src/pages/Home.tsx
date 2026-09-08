@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, ArrowRight, Lock, ListMusic,
-  Loader2, RefreshCw, Plus, X, Disc3, Sparkles, Github, History, HeartHandshake, Heart,
-  Play, Activity, Search, ShieldCheck, Crown, Smartphone, Shuffle
+  Loader2, RefreshCw, Plus, X, Disc3, Sparkles, History, HeartHandshake, Heart,
+  Play, Activity, Search, ShieldCheck, Crown, Shuffle
 } from 'lucide-react';
 import { createRoom, checkRoom, listRooms, randomMatchRoom } from '../api/meting';
 import { useRoomStore } from '../stores/roomStore';
@@ -13,7 +13,6 @@ import { usePageSeo, useSiteSeoConfig } from '../lib/seo';
 import { partitionRoomsByRecent, sortRecentRooms } from '../lib/recentRooms';
 import { getStoredRoomPassword } from '../lib/roomPassword';
 import { areRoomListsEqual, isLobbyHardLocked, sortLobbyRooms } from '../lib/roomListCompare';
-import { ANDROID_APK_URL } from '../lib/androidDownload';
 import { resizeCoverUrl } from '../lib/coverUrl';
 import { markRoomConfigApplyPending, rememberLatestCreatedRoom } from '../lib/roomConfigCache';
 import {
@@ -23,12 +22,10 @@ import {
   type SiteAnnouncement,
 } from '../lib/siteAnnouncement';
 import Tooltip from '../components/Tooltip';
-import ClientDownloadModal from '../components/ClientDownloadModal';
 import MusicContributionModal from '../components/MusicContributionModal';
 import SiteAnnouncementPopup from '../components/SiteAnnouncementPopup';
 import UserGuideTour from '../components/UserGuideTour';
 import Toast from '../components/Toast';
-import BrandMark from '../components/BrandMark';
 import HomeAuroraBackdrop from '../components/react-bits/HomeAuroraBackdrop';
 import GradientText from '../components/react-bits/GradientText';
 import ShinyText from '../components/react-bits/ShinyText';
@@ -56,14 +53,6 @@ function lobbyDirectCoverUrl(pic?: string): string | null {
   return resizeCoverUrl(raw, 'thumb');
 }
 
-function GiteeIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 1024 1024" fill="currentColor" className={className} aria-hidden>
-      <path d="M512 1024q-104 0-199-40-92-39-163-110T40 711Q0 616 0 512t40-199Q79 221 150 150T313 40q95-40 199-40t199 40q92 39 163 110t110 163q40 95 40 199t-40 199q-39 92-110 163T711 984q-95 40-199 40z m259-569H480q-10 0-17.5 7.5T455 480v64q0 10 7.5 17.5T480 569h177q11 0 18.5 7.5T683 594v13q0 31-22.5 53.5T607 683H367q-11 0-18.5-7.5T341 657V417q0-31 22.5-53.5T417 341h354q11 0 18-7t7-18v-63q0-11-7-18t-18-7H417q-38 0-72.5 14T283 283q-27 27-41 61.5T228 417v354q0 11 7 18t18 7h373q46 0 85.5-22.5t62-62Q796 672 796 626V480q0-10-7-17.5t-18-7.5z" />
-    </svg>
-  );
-}
-
 const headerIconCls =
   'home-header-icon group/hicon relative inline-flex items-center justify-center h-10 w-10 rounded-full text-white/55 border border-white/8 bg-white/[0.03] outline-none transition-[color,background,border-color,transform,box-shadow] duration-300 hover:text-white hover:bg-white/[0.1] hover:border-white/18 hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(0,0,0,0.35)] focus-visible:text-white focus-visible:ring-2 focus-visible:ring-netease-red/40';
 
@@ -88,7 +77,7 @@ function buildGradientLetters(text: string) {
   });
 }
 
-const BRAND_LETTERS = buildGradientLetters('OpenMusic');
+const BRAND_LETTERS = buildGradientLetters('摸鱼音乐');
 
 const COVER_GRADIENTS = [
   'from-rose-500 to-orange-400',
@@ -344,8 +333,8 @@ function DonationModal({ open, onClose, donations }: { open: boolean; onClose: (
               <Heart className="w-4 h-4 fill-current" />
             </span>
             <div>
-            <h2 className="text-xl font-bold text-pink-50">支持 OpenMusic</h2>
-            <p className="text-sm text-white/45 mt-1">感谢每一份支持与心意，让 OpenMusic 能继续陪大家听喜欢的歌，走过更多美好的时光 🎵</p>
+            <h2 className="text-xl font-bold text-pink-50">支持摸鱼音乐</h2>
+            <p className="text-sm text-white/45 mt-1">感谢每一份支持与心意，让摸鱼音乐能继续陪大家听喜欢的歌，走过更多美好的时光 🎵</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="p-2 rounded-full text-pink-100/50 bg-pink-300/10 hover:text-pink-50 hover:bg-pink-300/20" aria-label="关闭">
@@ -401,7 +390,7 @@ export default function Home() {
   const contributionEnabled = sharedMembershipEnabled && contributionPlatforms.length > 0;
   const navigate = useNavigate();
   const nickname = useRoomStore((s) => s.nickname);
-  const setNickname = useRoomStore((s) => s.setNickname);
+  const avatarUrl = useRoomStore((s) => s.avatar_url);
   const { leaveRoom } = useSocket();
 
   usePageSeo({ path: '/' });
@@ -423,7 +412,6 @@ export default function Home() {
   const [joinPassword, setJoinPassword] = useState('');
   const [modalError, setModalError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [contributionOpen, setContributionOpen] = useState(false);
   const [donationOpen, setDonationOpen] = useState(false);
   const [donations, setDonations] = useState<DonationEntry[]>([]);
@@ -680,8 +668,8 @@ export default function Home() {
       <header className="home-hero-stage home-hero-stage--header relative z-20 pt-6 px-4 sm:px-6 max-w-7xl mx-auto w-full">
         <div className="bg-white/[0.03] border border-white/10 backdrop-blur-xl rounded-full px-5 py-3 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-3">
-            <BrandMark className="h-10 w-10 drop-shadow-[0_8px_20px_rgba(255,77,85,.18)]" />
-            <span className="brand-wordmark text-xl font-extrabold tracking-tight select-none" aria-label="OpenMusic">
+            <img src="https://oss.cqbo.com/moyu/moyu.png" alt="摸鱼音乐" className="h-10 w-10 rounded-xl object-cover drop-shadow-[0_8px_20px_rgba(255,77,85,.18)]" />
+            <span className="brand-wordmark text-xl font-extrabold tracking-tight select-none" aria-label="摸鱼音乐">
               {BRAND_LETTERS.map((letter, index) => (
                 <span
                   key={index}
@@ -700,16 +688,16 @@ export default function Home() {
 
           <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <Tooltip content="支持 OpenMusic">
-                <button type="button" onClick={() => setDonationOpen(true)} className={`hidden sm:inline-flex ${headerPillCls}`} aria-label="支持 OpenMusic">
+              <Tooltip content="支持摸鱼音乐">
+                <a href="https://yucoder.cn/rank/reward" target="_blank" rel="noopener noreferrer" className={`hidden sm:inline-flex ${headerPillCls}`} aria-label="支持摸鱼音乐">
                   <Heart className="h-4 w-4 text-pink-300 fill-current" />
                   <span>赞赏</span>
-                </button>
+                </a>
               </Tooltip>
-              <Tooltip content="支持 OpenMusic">
-                <button type="button" onClick={() => setDonationOpen(true)} className={`inline-flex sm:hidden ${headerIconCls}`} aria-label="支持 OpenMusic">
+              <Tooltip content="支持摸鱼音乐">
+                <a href="https://yucoder.cn/rank/reward" target="_blank" rel="noopener noreferrer" className={`inline-flex sm:hidden ${headerIconCls}`} aria-label="支持摸鱼音乐">
                   <Heart className="h-5 w-5 text-pink-300 fill-current" />
-                </button>
+                </a>
               </Tooltip>
               {contributionEnabled && (
                 <>
@@ -726,16 +714,6 @@ export default function Home() {
                   </Tooltip>
                 </>
               )}
-              <Tooltip content="下载 Android 客户端">
-                <a href={ANDROID_APK_URL} download="openmusic.apk" className={`hidden sm:inline-flex ${headerIconCls}`} aria-label="下载 Android 客户端">
-                  <Smartphone className="home-header-icon__download h-5 w-5" />
-                </a>
-              </Tooltip>
-              <Tooltip content="下载 Android 客户端">
-                <button type="button" onClick={() => setDownloadModalOpen(true)} className={`inline-flex sm:hidden ${headerIconCls}`} aria-label="下载 Android 客户端">
-                  <Smartphone className="home-header-icon__download h-5 w-5" />
-                </button>
-              </Tooltip>
               {adminEntryPath && (
                 <Tooltip content="管理后台（仅本机可见）">
                   <a href={adminEntryPath} className={`hidden sm:inline-flex ${headerIconCls}`} aria-label="管理后台">
@@ -743,28 +721,6 @@ export default function Home() {
                   </a>
                 </Tooltip>
               )}
-              <Tooltip content="Gitee 仓库">
-                <a
-                  href="https://gitee.com/w3126197382/openmusic"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`hidden sm:inline-flex ${headerIconCls}`}
-                  aria-label="Gitee"
-                >
-                  <GiteeIcon className="home-header-icon__gitee w-5 h-5" />
-                </a>
-              </Tooltip>
-              <Tooltip content="GitHub · 欢迎 Star">
-                <a
-                  href="https://github.com/qq01-hub/openmusic"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`hidden sm:inline-flex ${headerIconCls}`}
-                  aria-label="GitHub"
-                >
-                  <Github className="w-5 h-5" />
-                </a>
-              </Tooltip>
             </div>
           </div>
         </div>
@@ -852,19 +808,18 @@ export default function Home() {
                   <div className="flex flex-col sm:flex-row gap-2.5">
                     <div className="relative flex-1 group" data-guide="home-nickname">
                       <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                        <Users className="w-5 h-5 text-white/40 transition-all duration-300 group-focus-within:text-netease-red group-focus-within:scale-110" />
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="摸鱼岛头像" className="h-8 w-8 rounded-full object-cover ring-1 ring-white/20" />
+                        ) : (
+                          <Users className="w-5 h-5 text-white/40" />
+                        )}
                       </div>
                       <input
                         type="text"
                         value={nickname}
-                        onChange={(e) => {
-                          setNickname(e.target.value);
-                          setError('');
-                          if (e.target.value.trim()) markGuideFeatureUsed('home-nickname');
-                        }}
-                        placeholder="给自己起个昵称..."
-                        maxLength={20}
-                        className="w-full h-12 sm:h-14 bg-transparent pl-14 pr-6 text-white caret-netease-red placeholder:text-white/30 outline-none rounded-full text-[15px] transition-colors focus:bg-white/[0.04]"
+                        readOnly
+                        aria-label="摸鱼岛昵称"
+                        className="w-full h-12 sm:h-14 cursor-default bg-transparent pl-16 pr-6 text-white/90 outline-none rounded-full text-[15px]"
                       />
                     </div>
                     <div className="flex flex-wrap sm:flex-nowrap gap-2.5">
@@ -1220,7 +1175,6 @@ export default function Home() {
         </Modal>
       )}
 
-      <ClientDownloadModal open={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />
       <MusicContributionModal open={contributionOpen} onClose={() => setContributionOpen(false)} defaultProvider={nickname} enabledPlatforms={contributionPlatforms} />
       <DonationModal open={donationOpen} onClose={() => setDonationOpen(false)} donations={donations} />
 
