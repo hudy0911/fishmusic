@@ -8,6 +8,7 @@ import NotFoundPage from './components/NotFoundPage';
 import { rememberAdminEntryPath } from './lib/adminEntryShortcut';
 import { lazyWithRetry } from './lib/lazyWithRetry';
 import { nextLoadingQuote, useLoadingQuote } from './lib/loadingQuote';
+import { useRoomStore } from './stores/roomStore';
 
 const Home = lazyWithRetry(() => import('./pages/Home'), 'Home');
 const Room = lazyWithRetry(() => import('./pages/Room'), 'Room');
@@ -93,6 +94,8 @@ function AdminGate() {
 export default function App() {
   const location = useLocation();
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
+  const [oauthReady, setOauthReady] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +113,46 @@ export default function App() {
     };
   }, []);
 
-  if (setupRequired === null) return <RouteFallback />;
+  useEffect(() => {
+    if (setupRequired !== false || looksLikeAdminEntryPath(location.pathname)) return;
+    let cancelled = false;
+    fetch('/api/auth/moyu/status', { credentials: 'same-origin', cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`登录状态检查失败（${response.status}）`);
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.enabled) {
+          setOauthError('摸鱼岛登录尚未配置，请先配置 YUCODER_CLIENT_ID、YUCODER_CLIENT_SECRET 和 YUCODER_REDIRECT_URI。');
+          return;
+        }
+        if (!data.authenticated) {
+          const returnPath = `${location.pathname}${location.search}${location.hash}`;
+          window.location.replace(`/api/auth/moyu/start?purpose=login&returnPath=${encodeURIComponent(returnPath)}`);
+          return;
+        }
+        if (data.bound?.username) {
+          localStorage.setItem('sjb_nickname', data.bound.username);
+          useRoomStore.setState({ nickname: data.bound.username });
+        }
+        if (data.bound?.avatarUrl) {
+          localStorage.setItem('avatar_url', data.bound.avatarUrl);
+          useRoomStore.setState({ avatar_url: data.bound.avatarUrl });
+        }
+        setOauthReady(true);
+      })
+      .catch((error) => {
+        if (!cancelled) setOauthError(error instanceof Error ? error.message : '摸鱼岛登录状态检查失败');
+      });
+    return () => { cancelled = true; };
+  }, [setupRequired, location.pathname, location.search, location.hash]);
+
+  const isAdminPath = looksLikeAdminEntryPath(location.pathname);
+  if (setupRequired === null || (setupRequired === false && !isAdminPath && !oauthReady && !oauthError)) return <RouteFallback />;
+  if (oauthError && !isAdminPath) {
+    return <div className="flex min-h-screen items-center justify-center bg-netease-dark px-6 text-center text-netease-muted"><p>{oauthError}</p></div>;
+  }
 
   return (
     <div className="h-full">

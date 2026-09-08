@@ -50,6 +50,9 @@ export function isApiSignRequired() {
 }
 
 const OAUTH_PUBLIC_GET_PATHS = new Set([
+  '/api/auth/moyu/status',
+  '/api/auth/moyu/start',
+  '/api/auth/moyu/callback',
   '/api/auth/linuxdo/status',
   '/api/auth/linuxdo/start',
   '/api/auth/linuxdo/callback',

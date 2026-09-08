@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import { fileURLToPath } from 'url';
 import { isBlockedMediaHostname } from './mediaProxy.js';
@@ -9,6 +10,7 @@ import { normalizeMusicSourcesEnabled } from './musicSources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_PATH = path.join(__dirname, 'runtimeConfig.json');
+dotenv.config({ path: path.join(__dirname, '.env'), override: false });
 const SECRET_FIELDS = new Set([
   'metingApiAuth',
   'qiniuAccessKey',
@@ -438,7 +440,15 @@ function normalizeAiApiProtocol(value) {
 export function getRuntimeConfig() {
   const persisted = getPersisted();
   const env = envDefaults();
-  const merged = { ...env, ...persisted };
+  const merged = {
+    ...env,
+    ...persisted,
+    // 初始化生成的空运行时字段不能遮蔽明确提供的摸鱼岛环境变量。
+    yucoderClientId: persisted.yucoderClientId || env.yucoderClientId,
+    yucoderClientSecret: persisted.yucoderClientSecret || env.yucoderClientSecret,
+    yucoderRedirectUri: persisted.yucoderRedirectUri || env.yucoderRedirectUri,
+    yucoderScope: persisted.yucoderScope || env.yucoderScope,
+  };
   // 房间凭证主密钥一旦通过环境变量提供，始终以环境变量为准，
   // 便于从后台配置故障中恢复，且不会被旧的加密配置覆盖。
   if (env.roomCredentialEncryptionKey) {

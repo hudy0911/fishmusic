@@ -2080,12 +2080,12 @@ app.post('/api/session/bootstrap', async (req, res) => {
 
 app.get(['/api/auth/linuxdo/status', '/api/auth/moyu/status'], async (req, res) => {
   const enabled = isLinuxdoConfigured();
-  if (!enabled) return res.json({ enabled: false, bound: null });
+  if (!enabled) return res.json({ enabled: false, authenticated: false, bound: null });
 
   const identity = resolveIdentityFromRequest(req);
   const roomId = String(req.query?.roomId || '').trim().toUpperCase();
   const bound = identity?.userId ? await getLinuxdoProfileForUser(identity.userId, roomId) : null;
-  res.json({ enabled, bound });
+  res.json({ enabled, authenticated: Boolean(identity?.userId && bound), bound });
 });
 
 app.get(['/api/auth/linuxdo/start', '/api/auth/moyu/start'], (req, res) => {
@@ -2094,8 +2094,13 @@ app.get(['/api/auth/linuxdo/start', '/api/auth/moyu/start'], (req, res) => {
     return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
   }
 
-  const purpose = req.query?.purpose === 'recover' ? 'recover' : 'bind';
+  const purpose = req.query?.purpose === 'recover' ? 'recover' : (req.query?.purpose === 'login' ? 'login' : 'bind');
   const returnPath = sanitizeReturnPath(req.query?.returnPath);
+
+  if (purpose === 'login') {
+    const state = signLinuxdoState({ purpose: 'login', returnPath });
+    return res.redirect(buildLinuxdoAuthorizeUrl(state));
+  }
 
   if (purpose === 'bind') {
     const identity = requireSessionIdentity(req, res);
@@ -2155,6 +2160,25 @@ app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, r
       return fail(returnPath, 'error');
     }
     return fail(returnPath, 'bound');
+  }
+
+  if (state.purpose === 'login') {
+    const existingUserId = await getUserIdForLinuxdo(profile.id);
+    const userId = existingUserId || createServerClientId();
+    if (!existingUserId) {
+      try {
+        await bindLinuxdoToUser(profile.id, userId, profile);
+      } catch (err) {
+        console.error('摸鱼岛账号创建失败:', err?.message || err);
+        return fail(returnPath, 'error');
+      }
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const cookieDeviceId = resolveDeviceIdFromCookieHeader(req.headers?.cookie || '');
+    const deviceId = cookieDeviceId || createServerClientId();
+    await linkDeviceToUser(deviceId, userId);
+    setIdentityCookieHeaders(res, userId, signClientId(userId, now), deviceId);
+    return fail(returnPath, 'logged_in');
   }
 
   // recover：查已绑定的 userId，转移当前房间房主关系并重新签发身份 Cookie
