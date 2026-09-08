@@ -1210,7 +1210,7 @@ export default function RoomSettingsModal({
                         )}
                         {linuxdoEnabled && (
                           <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
-                            <span className="w-16 flex-shrink-0 text-xs text-white/50">Linux.do</span>
+                            <span className="w-16 flex-shrink-0 text-xs text-white/50">摸鱼岛</span>
                             {linuxdoBound ? (
                               <>
                                 <span className="min-w-0 flex-1 truncate text-sm text-white">
@@ -1299,7 +1299,7 @@ export default function RoomSettingsModal({
                             onClick={() => startLinuxdoRecover(roomId || '', window.location.pathname)}
                             className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white transition-colors hover:bg-white/[0.06]"
                           >
-                            Linux.do 找回
+                            摸鱼岛找回
                           </button>
                         )}
                         {githubEnabled && (

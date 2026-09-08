@@ -84,44 +84,22 @@ interface RuntimeFieldGroup {
 
 const RUNTIME_FIELD_GROUPS: RuntimeFieldGroup[] = [
   {
-    id: 'linuxdo',
-    title: 'Linux.do 登录',
+    id: 'yucoder',
+    title: '摸鱼岛登录（唯一第三方登录）',
     purpose: (
       <>
         申请：
-        <Typography.Link href="https://connect.linux.do" target="_blank" rel="noreferrer">
-          connect.linux.do
+        <Typography.Link href="https://yucoder.cn" target="_blank" rel="noreferrer">
+          yucoder.cn
         </Typography.Link>
-        ；填齐后启用，接口地址以官方为准
+        ；请填写摸鱼岛 OAuth2 应用信息
       </>
     ),
     fields: [
-      { key: 'linuxdoClientId', label: 'Client ID' },
-      { key: 'linuxdoClientSecret', label: 'Client Secret', secret: true },
-      { key: 'linuxdoRedirectUri', label: '回调地址', placeholder: 'https://你的域名/api/auth/linuxdo/callback', tip: '须与 Linux.do 应用登记一致' },
-      { key: 'linuxdoAuthorizeUrl', label: '授权接口地址' },
-      { key: 'linuxdoTokenUrl', label: '令牌接口地址' },
-      { key: 'linuxdoUserInfoUrl', label: '用户信息接口地址' },
-      { key: 'linuxdoScope', label: 'Scope', placeholder: 'user' },
-    ],
-  },
-  {
-    id: 'github',
-    title: 'GitHub 登录',
-    purpose: (
-      <>
-        申请：
-        <Typography.Link href="https://github.com/settings/developers" target="_blank" rel="noreferrer">
-          github.com/settings/developers
-        </Typography.Link>
-        ；创建 OAuth App 后填入即可
-      </>
-    ),
-    fields: [
-      { key: 'githubClientId', label: 'Client ID' },
-      { key: 'githubClientSecret', label: 'Client Secret', secret: true },
-      { key: 'githubRedirectUri', label: '回调地址', placeholder: 'https://你的域名/api/auth/github/callback', tip: '须与 GitHub App 回调地址一致' },
-      { key: 'githubScope', label: 'Scope', placeholder: 'read:user' },
+      { key: 'yucoderClientId', label: 'Client ID' },
+      { key: 'yucoderClientSecret', label: 'Client Secret', secret: true },
+      { key: 'yucoderRedirectUri', label: '回调地址', placeholder: 'https://你的域名/api/auth/linuxdo/callback', tip: '须与摸鱼岛应用登记一致' },
+      { key: 'yucoderScope', label: 'Scope', placeholder: 'read' },
     ],
   },
   {
@@ -1604,9 +1582,7 @@ export default function RuntimeConfigPanel({
       label: '身份登录',
       children: (
         <>
-          {fieldGroup('linuxdo')}
-          <Divider style={{ margin: 0 }} />
-          {fieldGroup('github')}
+          {fieldGroup('yucoder')}
         </>
       ),
     },

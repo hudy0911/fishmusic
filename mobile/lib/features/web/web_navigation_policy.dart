@@ -37,7 +37,7 @@ bool hasTrustedBridgeToken({
 bool isOauthStartUrl(Uri? candidate, Uri trustedOrigin) {
   if (!isTrustedWebOrigin(candidate, trustedOrigin)) return false;
   final path = candidate!.path;
-  return RegExp(r'^/api/auth/(?:linuxdo|github)/start$').hasMatch(path) ||
+  return RegExp(r'^/api/auth/(?:moyu|linuxdo|github)/start$').hasMatch(path) ||
       RegExp(r'^/api/admin/(?:linuxdo|github)/(?:login|bind)/start$')
           .hasMatch(path);
 }

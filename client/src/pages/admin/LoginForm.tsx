@@ -10,9 +10,9 @@ import { adminFetch } from './utils';
 import { LinuxDoIcon } from './brandIcons';
 
 const LINUXDO_LOGIN_ERRORS: Record<string, string> = {
-  denied: '这个 Linux.do 账号还没有绑定管理员，请先用账号密码登录后在后台绑定',
+  denied: '这个摸鱼岛账号还没有绑定管理员，请先用账号密码登录后在后台绑定',
   locked: '登录尝试过于频繁，请稍后再试',
-  error: 'Linux.do 登录失败，请稍后再试',
+  error: '摸鱼岛登录失败，请稍后再试',
   expired: '登录已过期，请重试',
 };
 
@@ -41,7 +41,7 @@ export default function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
     const linuxdoResult = url.searchParams.get('linuxdo');
     const githubResult = url.searchParams.get('github');
     if (linuxdoResult && linuxdoResult !== 'login_ok') {
-      message.error(LINUXDO_LOGIN_ERRORS[linuxdoResult] || 'Linux.do 登录失败');
+      message.error(LINUXDO_LOGIN_ERRORS[linuxdoResult] || '摸鱼岛登录失败');
     } else if (githubResult && githubResult !== 'login_ok') {
       message.error(GITHUB_LOGIN_ERRORS[githubResult] || 'GitHub 登录失败');
     }
@@ -123,7 +123,7 @@ export default function LoginForm({ onLoggedIn }: { onLoggedIn: () => void }) {
                 icon={<LinuxDoIcon />}
                 onClick={() => { window.location.href = '/api/admin/linuxdo/login/start'; }}
               >
-                使用 Linux.do 登录
+                使用摸鱼岛登录
               </Button>
             )}
             {githubEnabled && (

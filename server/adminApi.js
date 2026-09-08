@@ -62,10 +62,10 @@ import {
   getAdminUsername,
   isAdminCredentialsPersisted,
   mustChangeAdminCredentials,
-  getAdminLinuxdoBinding,
-  isLinuxdoIdBoundToAdmin,
-  bindAdminLinuxdo,
-  unbindAdminLinuxdo,
+  getAdminYucoderBinding as getAdminLinuxdoBinding,
+  isYucoderIdBoundToAdmin as isLinuxdoIdBoundToAdmin,
+  bindAdminYucoder as bindAdminLinuxdo,
+  unbindAdminYucoder as unbindAdminLinuxdo,
   getAdminGithubBinding,
   isGithubIdBoundToAdmin,
   bindAdminGithub,
@@ -76,7 +76,7 @@ import {
   signLinuxdoState,
   buildLinuxdoAuthorizeUrl,
   clearLinuxdoBindingsForRoom,
-} from './linuxdoAuth.js';
+} from './yucoderAuth.js';
 import {
   isGithubConfigured,
   signGithubState,

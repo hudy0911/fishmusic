@@ -241,7 +241,7 @@ import {
   getLinuxdoProfileForUser,
   unbindLinuxdoForUser,
   clearLinuxdoBindingsForRoom,
-} from './linuxdoAuth.js';
+} from './yucoderAuth.js';
 import {
   isGithubConfigured,
   signGithubState,
@@ -2089,7 +2089,7 @@ app.get('/api/auth/linuxdo/status', async (req, res) => {
 });
 
 app.get('/api/auth/linuxdo/start', (req, res) => {
-  if (!isLinuxdoConfigured()) return res.status(400).json({ error: 'Linux.do 登录未配置' });
+  if (!isLinuxdoConfigured()) return res.status(400).json({ error: '摸鱼岛登录未配置' });
   if (!limitLinuxdoAuth(`linuxdo-start:${getRequestIp(req)}`)) {
     return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
   }
@@ -2103,7 +2103,7 @@ app.get('/api/auth/linuxdo/start', (req, res) => {
     const roomId = String(req.query?.roomId || '').trim().toUpperCase();
     const room = roomId ? getRoomInternal(roomId) : null;
     if (!room || room.creatorId !== identity.userId) {
-      return res.status(403).json({ error: '只有房主本人可以绑定 Linux.do 账号' });
+      return res.status(403).json({ error: '只有房主本人可以绑定摸鱼岛账号' });
     }
     const state = signLinuxdoState({ purpose: 'bind', userId: identity.userId, roomId, returnPath });
     return res.redirect(buildLinuxdoAuthorizeUrl(state));
@@ -2133,7 +2133,7 @@ app.get('/api/auth/linuxdo/callback', async (req, res) => {
     const accessToken = await exchangeLinuxdoCode(req.query?.code);
     profile = await fetchLinuxdoProfile(accessToken);
   } catch (err) {
-    console.error('Linux.do OAuth 失败:', err?.message || err);
+    console.error('摸鱼岛 OAuth 失败:', err?.message || err);
     return fail(returnPath, 'error');
   }
 
@@ -2151,7 +2151,7 @@ app.get('/api/auth/linuxdo/callback', async (req, res) => {
     try {
       await bindLinuxdoToUser(profile.id, identity.userId, profile, state.roomId);
     } catch (err) {
-      console.error('Linux.do 绑定写入失败:', err?.message || err);
+      console.error('摸鱼岛绑定写入失败:', err?.message || err);
       return fail(returnPath, 'error');
     }
     return fail(returnPath, 'bound');
@@ -2803,7 +2803,8 @@ app.use(express.static(clientDist, {
     }
   },
 }));
-app.get('*', (req, res, next) => {
+// Express 5 使用 path-to-regexp 新语法；/{*splat} 匹配根路径及其所有子路径。
+app.get('/{*splat}', (req, res, next) => {
   if (
     req.path.startsWith('/api')
     || req.path.startsWith('/socket.io')

@@ -6,14 +6,20 @@
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: dark;
   --om-canvas: #09090b;
+  --om-canvas-rgb: 9 9 11;
   --om-surface: #111114;
+  --om-surface-rgb: 17 17 20;
   --om-surface-raised: #18181d;
+  --om-surface-raised-rgb: 24 24 29;
   --om-surface-hover: #202026;
+  --om-surface-hover-rgb: 32 32 38;
   --om-border: rgba(255, 255, 255, 0.08);
+  --om-border-rgb: 43 43 51;
   --om-border-strong: rgba(255, 255, 255, 0.14);
   --om-text: #f4f4f5;
   --om-text-secondary: #a1a1aa;
   --om-text-muted: #71717a;
+  --om-muted-rgb: 161 161 170;
   --om-accent: #ff4d55;
   --om-accent-rgb: 255 77 85;
   --om-accent-soft: #ff8a90;
@@ -27,6 +33,43 @@
   --room-chrome-border: rgba(255, 255, 255, 0.1);
   --room-chrome-filter: blur(24px);
 }
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --om-canvas: #f4f5f7;
+  --om-canvas-rgb: 244 245 247;
+  --om-surface: #ffffff;
+  --om-surface-rgb: 255 255 255;
+  --om-surface-raised: #ffffff;
+  --om-surface-raised-rgb: 255 255 255;
+  --om-surface-hover: #eef0f4;
+  --om-surface-hover-rgb: 238 240 244;
+  --om-border: rgba(15, 23, 42, 0.12);
+  --om-border-rgb: 15 23 42;
+  --om-border-strong: rgba(15, 23, 42, 0.2);
+  --om-text: #18202c;
+  --om-text-secondary: #4b5563;
+  --om-text-muted: #6b7280;
+  --om-muted-rgb: 107 114 128;
+  --room-panel-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 250, 0.9));
+  --room-panel-shadow: 0 18px 60px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --room-panel-divider: rgba(15, 23, 42, 0.09);
+  --room-chrome-bg: rgba(255, 255, 255, 0.76);
+  --room-chrome-border: rgba(15, 23, 42, 0.12);
+}
+
+/* 页面历史上使用了白色半透明工具类；浅色主题下统一映射为深色文字/浅色表面。 */
+:root[data-theme='light'] body,
+:root[data-theme='light'] #root { color: var(--om-text); }
+:root[data-theme='light'] [class*='text-white'] { color: var(--om-text) !important; }
+:root[data-theme='light'] [class*='border-white'] { border-color: var(--om-border) !important; }
+:root[data-theme='light'] [class*='bg-white'] { background-color: rgba(255, 255, 255, 0.72) !important; }
+:root[data-theme='light'] [class*='shadow-black'] { --tw-shadow-color: rgba(15, 23, 42, 0.14) !important; }
+:root[data-theme='light'] [class*='bg-[#050505]'],
+:root[data-theme='light'] [class*='bg-[#1a1a1a]'] { background-color: var(--om-canvas) !important; }
+:root[data-theme='light'] .home-modal-input { background-color: #fff !important; color: var(--om-text) !important; caret-color: var(--om-text); }
+:root[data-theme='light'] .home-modal-input::placeholder { color: rgba(75, 85, 99, 0.6); }
+:root[data-theme='light'] .home-modal-input:-webkit-autofill { -webkit-text-fill-color: var(--om-text) !important; box-shadow: 0 0 0 1000px #fff inset !important; }
 
 .nav-link-underline {
   position: relative;

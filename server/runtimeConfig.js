@@ -17,6 +17,7 @@ const SECRET_FIELDS = new Set([
   'apihzKey',
   'linuxdoClientSecret',
   'githubClientSecret',
+  'yucoderClientSecret',
   'roomCredentialEncryptionKey',
   'aiApiKey',
 ]);
@@ -87,6 +88,11 @@ function envDefaults() {
     githubClientSecret: envText('GITHUB_CLIENT_SECRET'),
     githubRedirectUri: envText('GITHUB_REDIRECT_URI'),
     githubScope: envText('GITHUB_SCOPE', 'read:user'),
+    // 摸鱼岛 OAuth2（唯一第三方登录）
+    yucoderClientId: envText('YUCODER_CLIENT_ID'),
+    yucoderClientSecret: envText('YUCODER_CLIENT_SECRET'),
+    yucoderRedirectUri: envText('YUCODER_REDIRECT_URI'),
+    yucoderScope: envText('YUCODER_SCOPE', 'read'),
     roomCredentialEncryptionKey: envText('ROOM_CREDENTIAL_ENCRYPTION_KEY'),
     /** 各平台是否开放 SVIP/高级音质选项；旧 SVIP_QUALITY_ENABLED 会作为全平台兼容默认值。 */
     svipQualityEnabled: (() => { const enabled = envText('SVIP_QUALITY_ENABLED') === '1' || envText('SVIP_QUALITY_ENABLED').toLowerCase() === 'true'; return { netease: enabled, tencent: enabled, kugou: enabled, qishui: enabled }; })(),
@@ -306,6 +312,10 @@ function normalize(config) {
     githubClientSecret: String(config.githubClientSecret || '').trim(),
     githubRedirectUri: String(config.githubRedirectUri || '').trim(),
     githubScope: String(config.githubScope || 'read:user').trim() || 'read:user',
+    yucoderClientId: String(config.yucoderClientId || '').trim(),
+    yucoderClientSecret: String(config.yucoderClientSecret || '').trim(),
+    yucoderRedirectUri: String(config.yucoderRedirectUri || '').trim(),
+    yucoderScope: String(config.yucoderScope || 'read').trim() || 'read',
     roomCredentialEncryptionKey: String(config.roomCredentialEncryptionKey || '').trim(),
     svipQualityEnabled: (() => {
       const legacy = config.svipQualityEnabled === true
@@ -488,7 +498,12 @@ export function isLinuxdoConfigured(config = getRuntimeConfig()) {
 
 /** GitHub OAuth 是否已具备可用配置（只需要客户端凭据 + 回调地址，接口地址是固定的） */
 export function isGithubConfigured(config = getRuntimeConfig()) {
-  return Boolean(config.githubClientId && config.githubClientSecret && config.githubRedirectUri);
+  // 第三方登录已统一为摸鱼岛，GitHub 仅保留历史配置读取以便平滑迁移。
+  return false;
+}
+
+export function isYucoderConfigured(config = getRuntimeConfig()) {
+  return Boolean(config.yucoderClientId && config.yucoderClientSecret && config.yucoderRedirectUri);
 }
 
 function validateHttpUrl(value, label, { allowEmpty = false, allowList = false, allowPrivate = false } = {}) {

@@ -11,8 +11,10 @@ import { refreshQualityCapabilities } from './api/music/quality';
 import { applyStoredRoomThemeColor } from './lib/roomThemeColor';
 import { installGuideUsageTracking } from './lib/userGuide';
 import { prefetchLoadingQuote } from './lib/loadingQuote';
+import { applyStoredTheme } from './lib/theme';
 
 applyStoredRoomThemeColor();
+applyStoredTheme();
 installOpenMusicDebug();
 installVisibilitySync();
 installGuideUsageTracking();

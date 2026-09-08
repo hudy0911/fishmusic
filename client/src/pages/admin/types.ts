@@ -95,6 +95,10 @@ export interface RuntimeConfig {
   githubClientSecret: string;
   githubRedirectUri: string;
   githubScope: string;
+  yucoderClientId: string;
+  yucoderClientSecret: string;
+  yucoderRedirectUri: string;
+  yucoderScope: string;
   roomCredentialEncryptionKey: string;
   /** 是否开放 SVIP 音质选项（需上游 Cookie 具备对应权益） */
   svipQualityEnabled: Record<MusicApiPlatform, boolean>;

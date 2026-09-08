@@ -12,7 +12,7 @@ export interface LinuxdoStatus {
   bound: LinuxdoBinding | null;
 }
 
-/** 当前浏览器身份是否已绑定 Linux.do（未配置该功能时 enabled 为 false） */
+/** 当前浏览器身份是否已绑定摸鱼岛（未配置该功能时 enabled 为 false） */
 export async function fetchLinuxdoStatus(roomId?: string): Promise<LinuxdoStatus> {
   try {
     const res = await fetchWithTimeout(`/api/auth/linuxdo/status${roomId ? `?roomId=${encodeURIComponent(roomId)}` : ''}`, {}, 8000);
@@ -24,13 +24,13 @@ export async function fetchLinuxdoStatus(roomId?: string): Promise<LinuxdoStatus
   }
 }
 
-/** 跳转到 Linux.do 完成绑定（房主专用，需要 roomId 校验房主身份） */
+/** 跳转到摸鱼岛完成绑定（房主专用，需要 roomId 校验房主身份） */
 export function startLinuxdoBind(roomId: string, returnPath: string): void {
   const params = new URLSearchParams({ purpose: 'bind', roomId, returnPath });
   window.location.href = `/api/auth/linuxdo/start?${params.toString()}`;
 }
 
-/** 跳转到 Linux.do 完成身份找回（任何人都可发起，只有此前绑定过的账号才能找回成功） */
+/** 跳转到摸鱼岛完成身份找回（任何人都可发起，只有此前绑定过的账号才能找回成功） */
 export function startLinuxdoRecover(roomId: string, returnPath: string): void {
   const params = new URLSearchParams({ purpose: 'recover', roomId, returnPath });
   window.location.href = `/api/auth/linuxdo/start?${params.toString()}`;
@@ -48,13 +48,13 @@ export async function unbindLinuxdo(roomId?: string): Promise<{ success: boolean
 }
 
 const LINUXDO_RESULT_MESSAGES: Record<string, { message: string; type: 'success' | 'error' }> = {
-  bound: { message: '已绑定 Linux.do 账号', type: 'success' },
-  recovered: { message: '已通过 Linux.do 找回房间身份', type: 'success' },
+  bound: { message: '已绑定摸鱼岛账号', type: 'success' },
+  recovered: { message: '已通过摸鱼岛找回房间身份', type: 'success' },
   'room-notfound': { message: '房间不存在', type: 'error' },
   denied: { message: '该身份不能找回此房间', type: 'error' },
-  notfound: { message: '这个 Linux.do 账号还没有绑定过任何身份', type: 'error' },
+  notfound: { message: '这个摸鱼岛账号还没有绑定过任何身份', type: 'error' },
   expired: { message: '登录已过期或身份已变化，请重试', type: 'error' },
-  error: { message: 'Linux.do 登录失败，请稍后再试', type: 'error' },
+  error: { message: '摸鱼岛登录失败，请稍后再试', type: 'error' },
 };
 
 /** 从当前地址栏读取 `?linuxdo=` 回跳结果并清理该参数，返回要展示的提示（没有则为 null） */

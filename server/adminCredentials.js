@@ -66,6 +66,7 @@ function normalizeRecord(parsed) {
     mustChange: parsed.mustChange === true,
     linuxdo: normalizeOAuthBinding(parsed.linuxdo),
     github: normalizeOAuthBinding(parsed.github),
+    yucoder: normalizeOAuthBinding(parsed.yucoder),
   };
 }
 
@@ -302,6 +303,35 @@ export async function unbindAdminGithub() {
   const persisted = await writeToRedis(payload);
   if (!persisted) return { success: false, error: '解绑写入 Redis 失败' };
 
+  current = { ...record, source: 'redis' };
+  return { success: true };
+}
+
+export function getAdminYucoderBinding() {
+  return current?.yucoder || null;
+}
+
+export function isYucoderIdBoundToAdmin(yucoderId) {
+  const id = String(yucoderId || '').trim();
+  return Boolean(id && current?.yucoder?.id === id);
+}
+
+export async function bindAdminYucoder({ id, username, avatarUrl }) {
+  if (!current) return { success: false, error: '管理后台未启用' };
+  const yucoderId = String(id || '').trim();
+  if (!yucoderId) return { success: false, error: '无效的摸鱼岛账号' };
+  const record = { ...current, yucoder: { id: yucoderId, username: String(username || ''), avatarUrl: String(avatarUrl || ''), boundAt: Date.now() } };
+  const { source: _s, ...payload } = record;
+  if (!await writeToRedis(payload)) return { success: false, error: '绑定写入 Redis 失败' };
+  current = { ...record, source: 'redis' };
+  return { success: true, yucoder: current.yucoder };
+}
+
+export async function unbindAdminYucoder() {
+  if (!current) return { success: false, error: '管理后台未启用' };
+  const record = { ...current, yucoder: null };
+  const { source: _s, ...payload } = record;
+  if (!await writeToRedis(payload)) return { success: false, error: '解绑写入 Redis 失败' };
   current = { ...record, source: 'redis' };
   return { success: true };
 }

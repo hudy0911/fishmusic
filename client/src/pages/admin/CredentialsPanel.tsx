@@ -199,7 +199,7 @@ export default function CredentialsPanel({
         <>
           <Divider style={{ margin: '20px 0 16px' }} />
           <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>
-            Linux.do 登录
+            摸鱼岛登录
           </Typography.Text>
           <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
             绑定后可用该账号登录后台
@@ -221,7 +221,7 @@ export default function CredentialsPanel({
               icon={<LinuxDoIcon />}
               onClick={() => { window.location.href = '/api/admin/linuxdo/bind/start'; }}
             >
-              绑定 Linux.do 账号
+              绑定摸鱼岛账号
             </Button>
           )}
         </>
