@@ -1868,6 +1868,9 @@ app.get('/api/music/kugou/song', handleKugouSong);
 const IDENTITY_UID_COOKIE = 'openmusic_uid';
 const IDENTITY_TOKEN_COOKIE = 'openmusic_token';
 const DEVICE_ID_COOKIE = 'openmusic_did';
+const EMBEDDED_IDENTITY_UID_COOKIE = 'openmusic_embed_uid';
+const EMBEDDED_IDENTITY_TOKEN_COOKIE = 'openmusic_embed_token';
+const EMBEDDED_DEVICE_ID_COOKIE = 'openmusic_embed_did';
 const IDENTITY_COOKIE_MAX_AGE_SEC = SESSION_TTL_SEC;
 
 function parseCookieHeader(header) {
@@ -1943,13 +1946,9 @@ function setIdentityCookieHeaders(res, userId, token, deviceId = null) {
   // 临时 HTTP 部署必须由管理员显式允许不安全 Cookie。
   const useSecureCookie = (IS_PRODUCTION && !ALLOW_INSECURE_COOKIES) || res.req?.secure;
   const secure = useSecureCookie ? '; Secure' : '';
-  const origin = res.req?.headers?.origin;
-  // 同主机跨端口（Flutter :57920 → API :4000）仍是 same-site，Lax 即可。
-  // SameSite=None 必须带 Secure；本地 HTTP 若写 None 无 Secure，Chrome 会直接丢弃 Cookie。
-  const sameSite = (useSecureCookie && !IS_PRODUCTION && isLocalDevOrigin(origin))
-    ? 'SameSite=None'
-    : 'SameSite=Lax';
-  const base = `Path=/; Max-Age=${IDENTITY_COOKIE_MAX_AGE_SEC}; HttpOnly; ${sameSite}${secure}`;
+  // 顶层页面继续使用 Lax Cookie；iframe 使用独立的 Partitioned Cookie，既允许 OAuth
+  // 回调后在第三方上下文维持会话，又不会把同一身份透传给其他嵌入站点。
+  const base = `Path=/; Max-Age=${IDENTITY_COOKIE_MAX_AGE_SEC}; HttpOnly; SameSite=Lax${secure}`;
   const cookies = [
     `${IDENTITY_UID_COOKIE}=${encodeURIComponent(userId)}; ${base}`,
     `${IDENTITY_TOKEN_COOKIE}=${encodeURIComponent(token)}; ${base}`,
@@ -1958,13 +1957,25 @@ function setIdentityCookieHeaders(res, userId, token, deviceId = null) {
   if (did) {
     cookies.push(`${DEVICE_ID_COOKIE}=${encodeURIComponent(did)}; ${base}`);
   }
+  // SameSite=None 与 Partitioned 都要求 Secure；不安全 HTTP 部署无法可靠支持跨站 iframe。
+  if (useSecureCookie) {
+    const embeddedBase = `Path=/; Max-Age=${IDENTITY_COOKIE_MAX_AGE_SEC}; HttpOnly; SameSite=None; Secure; Partitioned`;
+    cookies.push(
+      `${EMBEDDED_IDENTITY_UID_COOKIE}=${encodeURIComponent(userId)}; ${embeddedBase}`,
+      `${EMBEDDED_IDENTITY_TOKEN_COOKIE}=${encodeURIComponent(token)}; ${embeddedBase}`,
+    );
+    if (did) {
+      cookies.push(`${EMBEDDED_DEVICE_ID_COOKIE}=${encodeURIComponent(did)}; ${embeddedBase}`);
+    }
+  }
   res.setHeader('Set-Cookie', cookies);
 }
 
 /** 仅读取 HttpOnly 设备 Cookie（不可用 body/localStorage 冒充恢复） */
 function resolveDeviceIdFromCookieHeader(cookieHeader) {
   const cookies = parseCookieHeader(cookieHeader || '');
-  return sanitizeDeviceId(cookies[DEVICE_ID_COOKIE]);
+  return sanitizeDeviceId(cookies[DEVICE_ID_COOKIE])
+    || sanitizeDeviceId(cookies[EMBEDDED_DEVICE_ID_COOKIE]);
 }
 
 function resolveBodyDeviceId(req) {
@@ -1973,9 +1984,15 @@ function resolveBodyDeviceId(req) {
 
 function resolveIdentityFromCookies(cookieHeader) {
   const cookies = parseCookieHeader(cookieHeader);
-  const userId = sanitizeClientId(cookies[IDENTITY_UID_COOKIE]);
-  const token = String(cookies[IDENTITY_TOKEN_COOKIE] || '').trim();
-  return verifyClientToken(userId, token);
+  const primary = verifyClientToken(
+    sanitizeClientId(cookies[IDENTITY_UID_COOKIE]),
+    String(cookies[IDENTITY_TOKEN_COOKIE] || '').trim(),
+  );
+  if (primary) return primary;
+  return verifyClientToken(
+    sanitizeClientId(cookies[EMBEDDED_IDENTITY_UID_COOKIE]),
+    String(cookies[EMBEDDED_IDENTITY_TOKEN_COOKIE] || '').trim(),
+  );
 }
 
 function resolveIdentityFromRequest(req) {
