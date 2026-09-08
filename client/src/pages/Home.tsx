@@ -148,10 +148,10 @@ const RoomCard = memo(function RoomCard({
     setCoverFailed(false);
   }, [coverUrl]);
 
-  const cardClassName = `group relative w-full text-left rounded-[24px] border overflow-hidden backdrop-blur-md
+  const cardClassName = `home-room-card group relative w-full overflow-hidden rounded-[24px] border text-left backdrop-blur-md
     ${hardLocked
-      ? 'border-white/5 bg-black/40 opacity-60 cursor-not-allowed'
-      : 'border-white/10 bg-gradient-to-br from-white/[0.09] to-white/[0.02] shadow-xl shadow-black/40 hover:border-white/25 hover:from-white/[0.14] hover:to-white/[0.04] hover:shadow-2xl hover:shadow-black/70'
+      ? 'home-room-card--locked cursor-not-allowed opacity-60'
+      : 'home-room-card--available'
     }`;
 
   const body = (
@@ -169,7 +169,7 @@ const RoomCard = memo(function RoomCard({
       {(room.isOwner || room.isAdmin) && (
         <Tooltip content={room.isOwner ? '房主' : '管理员'}>
           <div
-            className="absolute right-4 top-4 z-20 inline-flex items-center justify-center rounded-full border border-white/10 bg-black/45 p-2 text-amber-300 shadow-lg backdrop-blur-md"
+            className="home-room-role absolute right-4 top-4 z-20 inline-flex items-center justify-center rounded-full border p-2 text-amber-300 backdrop-blur-md"
             aria-label={room.isOwner ? '房主' : '管理员'}
           >
             {room.isOwner ? <Crown className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4 text-sky-300" />}
@@ -181,7 +181,7 @@ const RoomCard = memo(function RoomCard({
         <div className="flex items-center gap-5" style={{ transformStyle: 'preserve-3d' }}>
           {/* 封面区块（倾斜时视差浮起） */}
           <div className="relative flex-shrink-0 transition-transform duration-300 ease-out [transform:translateZ(0)] group-hover:[transform:translateZ(45px)]">
-            <div className={`relative w-16 h-16 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-gradient-to-br ${gradient} flex items-center justify-center transition-all duration-300 shadow-[0_10px_22px_rgba(0,0,0,0.55),0_2px_5px_rgba(0,0,0,0.5),inset_0_1.5px_0_rgba(255,255,255,0.35),inset_0_-2px_4px_rgba(0,0,0,0.35)] ${hardLocked ? 'grayscale' : 'group-hover:shadow-[0_18px_36px_rgba(0,0,0,0.65),0_3px_7px_rgba(0,0,0,0.5),inset_0_1.5px_0_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.35)] group-hover:scale-105'}`}>
+            <div className={`home-room-cover relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br transition-all duration-300 sm:h-24 sm:w-24 ${gradient} ${hardLocked ? 'grayscale' : 'group-hover:-translate-y-0.5 group-hover:scale-[1.03]'}`}>
               {showCover && (
                 <img
                   key={coverUrl!}
@@ -211,7 +211,7 @@ const RoomCard = memo(function RoomCard({
           {/* 信息区块（倾斜时视差浮起） */}
           <div className="min-w-0 flex-1 flex flex-col h-full justify-center transition-transform duration-300 ease-out [transform:translateZ(0)] group-hover:[transform:translateZ(24px)]">
             <div className="flex items-center gap-2.5 mb-1.5 min-h-[3.5rem] sm:min-h-[3.75rem]">
-              <h3 className={`min-w-0 flex-1 text-xl sm:text-[22px] font-black tracking-tight break-words whitespace-normal leading-snug line-clamp-2 ${hardLocked ? 'text-white/50' : 'text-emboss'}`}>
+              <h3 className={`min-w-0 flex-1 text-xl sm:text-[22px] font-bold tracking-tight break-words whitespace-normal leading-snug line-clamp-2 ${hardLocked ? 'text-white/50' : 'text-white'}`}>
                 {room.name}
               </h3>
               {room.hasPassword && !hardLocked && (
@@ -222,27 +222,27 @@ const RoomCard = memo(function RoomCard({
             </div>
 
             {room.currentSong ? (
-              <div className="min-w-0 max-w-full self-start mt-0.5 rounded-lg bg-black/25 px-2.5 py-1 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.06)]">
-                <p className={`flex items-center gap-1.5 text-[13px] truncate transition-colors ${isActive && !hardLocked ? 'text-white/65' : 'text-white/50'} group-hover:text-white/75`}>
+              <div className="home-room-song mt-0.5 min-w-0 max-w-full self-start">
+                <p className={`flex min-w-0 items-center gap-1.5 truncate text-[13px] transition-colors ${isActive && !hardLocked ? 'text-white/65' : 'text-white/50'} group-hover:text-white/75`}>
                   {isActive && !hardLocked && (
                     <span className="flex-shrink-0 text-netease-red/80 text-[12px] animate-pulse">♪</span>
                   )}
-                  <span className="flex-none max-w-full truncate">{room.currentSong.name}</span>
-                  <span className="flex-shrink-0 text-white/25">·</span>
+                  <span className="min-w-0 truncate font-medium">{room.currentSong.name}</span>
+                  <span className="flex-shrink-0 text-white/25" aria-hidden>—</span>
                   <span className="min-w-0 truncate text-white/35 group-hover:text-white/50 transition-colors">{room.currentSong.artist}</span>
                 </p>
               </div>
             ) : (
-              <p className="self-start mt-0.5 rounded-lg bg-black/25 px-2.5 py-1 shadow-[inset_0_1.5px_3px_rgba(0,0,0,0.55),0_1px_0_rgba(255,255,255,0.06)] text-[13px] text-white/30 italic group-hover:text-white/50 transition-colors">等待点播...</p>
+              <p className="home-room-song mt-0.5 self-start text-[13px] italic text-white/30 transition-colors group-hover:text-white/50">等待点播...</p>
             )}
 
-            <div className="flex items-center gap-2 sm:gap-5 mt-4 pt-3.5 border-t border-black/40 [box-shadow:inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors">
+            <div className="home-room-meta mt-4 flex items-center gap-2 border-t pt-3.5 transition-colors sm:gap-5">
               <div className="flex min-w-0 items-center gap-1.5 sm:gap-2.5">
-                <span className="inline-flex flex-shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-lg px-1.5 sm:px-2 py-1 text-xs font-semibold text-white/55 group-hover:text-white/85 transition-colors bg-gradient-to-b from-white/[0.09] to-white/[0.02] border border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12)]">
+                <span className="home-room-stat inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium text-white/55 transition-colors group-hover:text-white/85 sm:gap-1.5">
                   <Users className="w-3.5 h-3.5 flex-shrink-0 text-white/40 group-hover:text-emerald-400 group-hover:scale-110 transition-all duration-300" />
                   {room.userCount}人
                 </span>
-                <span className="inline-flex flex-shrink-0 items-center gap-1 sm:gap-1.5 whitespace-nowrap rounded-lg px-1.5 sm:px-2 py-1 text-xs font-semibold text-white/55 group-hover:text-white/85 transition-colors bg-gradient-to-b from-white/[0.09] to-white/[0.02] border border-white/10 shadow-[0_2px_4px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12)]">
+                <span className="home-room-stat inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium text-white/55 transition-colors group-hover:text-white/85 sm:gap-1.5">
                   <ListMusic className="w-3.5 h-3.5 flex-shrink-0 text-white/40 group-hover:text-violet-400 group-hover:scale-110 transition-all duration-300" />
                   {room.queueLength}首
                 </span>
@@ -667,7 +667,7 @@ export default function Home() {
 
       {/* 悬浮顶栏 */}
       <header className="home-hero-stage home-hero-stage--header relative z-20 pt-6 px-4 sm:px-6 max-w-7xl mx-auto w-full">
-        <div className="bg-white/[0.03] border border-white/10 backdrop-blur-xl rounded-full px-5 py-3 flex items-center justify-between shadow-2xl">
+        <div className="home-topbar flex items-center justify-between rounded-full border px-5 py-3 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <img src="https://oss.cqbo.com/moyu/moyu.png" alt="摸鱼音乐" className="h-10 w-10 rounded-xl object-cover drop-shadow-[0_8px_20px_rgba(255,77,85,.18)]" />
             <span className="brand-wordmark text-xl font-extrabold tracking-tight select-none" aria-label="摸鱼音乐">
@@ -688,7 +688,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <ThemeToggle />
+            <ThemeToggle className="home-theme-toggle" />
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Tooltip content="支持摸鱼音乐">
                 <a href="https://yucoder.cn/rank/reward" target="_blank" rel="noopener noreferrer" className={`hidden sm:inline-flex ${headerPillCls}`} aria-label="支持摸鱼音乐">
@@ -735,7 +735,7 @@ export default function Home() {
           {/* 精简居中版 Hero Section */}
           <section className="mb-16 flex flex-col items-center text-center max-w-3xl mx-auto">
             {/* 状态徽章 */}
-            <div className="home-hero-stage home-hero-stage--badge mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-md text-xs sm:text-[13px] font-medium">
+            <div className="home-status-chip home-hero-stage home-hero-stage--badge mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-medium backdrop-blur-md sm:text-[13px]">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
@@ -805,7 +805,7 @@ export default function Home() {
                 edgeZone={48}
               >
                 <SpotlightCard
-                  className="w-full rounded-[28px] sm:rounded-full border-0 bg-white/[0.03] p-2.5 shadow-2xl backdrop-blur-xl"
+                  className="home-action-console w-full rounded-[28px] border-0 p-2.5 backdrop-blur-xl sm:rounded-full"
                   spotlightColor="rgba(255, 77, 85, 0.22)"
                 >
                   <div className="flex flex-col sm:flex-row gap-2.5">
@@ -837,7 +837,7 @@ export default function Home() {
                             disabled={matchLoading}
                             onMouseMove={handleBtnTilt}
                             onMouseLeave={resetBtnTilt}
-                            className="btn-shine btn-tilt group/match h-12 sm:h-14 w-full px-5 sm:px-7 rounded-full bg-white/10 hover:bg-white/18 border border-white/10 hover:border-white/25 text-white font-semibold shadow-lg shadow-black/20 whitespace-nowrap disabled:cursor-wait disabled:opacity-70"
+                            className="home-action-secondary btn-shine btn-tilt group/match h-12 w-full whitespace-nowrap rounded-full border px-5 font-semibold text-white disabled:cursor-wait disabled:opacity-70 sm:h-14 sm:px-7"
                           >
                             <span className="btn-tilt-face flex h-full w-full items-center justify-center gap-2">
                               {matchLoading ? (
@@ -884,7 +884,7 @@ export default function Home() {
                             }}
                             onMouseMove={handleBtnTilt}
                             onMouseLeave={resetBtnTilt}
-                            className="btn-shine btn-tilt group/join h-12 sm:h-14 w-full px-6 sm:px-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/25 text-white font-medium whitespace-nowrap"
+                            className="home-action-secondary btn-shine btn-tilt group/join h-12 w-full whitespace-nowrap rounded-full border px-6 font-medium text-white sm:h-14 sm:px-8"
                           >
                             <span className="btn-tilt-face flex h-full w-full items-center justify-center">
                               加入
@@ -943,7 +943,7 @@ export default function Home() {
             <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
               大厅
               {rooms.length > 0 && (
-                <span className="text-sm font-medium bg-white/10 text-white/80 px-3 py-1 rounded-full align-middle">
+                <span className="home-lobby-count rounded-full px-3 py-1 align-middle text-sm font-medium text-white/80">
                   {rooms.length} 活跃
                 </span>
               )}
@@ -952,7 +952,7 @@ export default function Home() {
               type="button"
               onClick={() => void fetchRooms()}
               disabled={roomsLoading}
-              className="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 transition-all disabled:opacity-50"
+              className="home-lobby-refresh group flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-white/60 transition-all hover:text-white disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 group-hover:rotate-180 transition-transform duration-500 ${roomsLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">刷新列表</span>

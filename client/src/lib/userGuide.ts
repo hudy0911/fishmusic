@@ -129,7 +129,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: 'room-hot',
     scope: 'room',
     title: '热榜点歌',
-    body: '热榜：双击或点「+」加入播放队列',
+    body: '热榜：双击或点「+」加入播放队列\n桌面端可用标题栏按钮收起，点击火焰图标恢复',
     side: 'right',
   },
   {
