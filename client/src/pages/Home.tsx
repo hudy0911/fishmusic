@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, ArrowRight, Lock, ListMusic,
   Loader2, RefreshCw, Plus, X, Disc3, Sparkles, History, HeartHandshake, Heart,
-  Play, Activity, Search, ShieldCheck, Crown, Shuffle
+  Play, Activity, Search, ShieldCheck, Crown, Shuffle, LogOut
 } from 'lucide-react';
 import { createRoom, checkRoom, listRooms, randomMatchRoom } from '../api/meting';
 import { useRoomStore } from '../stores/roomStore';
@@ -419,10 +419,30 @@ export default function Home() {
   const [donations, setDonations] = useState<DonationEntry[]>([]);
   const [siteAnnouncement, setSiteAnnouncement] = useState<SiteAnnouncement | null>(null);
   const [siteAnnouncementOpen, setSiteAnnouncementOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   const roomsFetchSeq = useRef(0);
   const roomsRef = useRef(rooms);
   roomsRef.current = rooms;
+
+  const handleLogout = useCallback(async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    try {
+      await leaveRoom();
+      await fetch('/api/auth/moyu/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+    } finally {
+      localStorage.removeItem('sjb_nickname');
+      localStorage.removeItem('avatar_url');
+      useRoomStore.getState().resetSession();
+      window.location.replace('/');
+    }
+  }, [leaveRoom, logoutLoading]);
   const heroCopyRef = useRef<HTMLParagraphElement | null>(null);
   const handleHeroCopyMove = useCallback((e: React.MouseEvent) => {
     const el = heroCopyRef.current;
@@ -691,6 +711,29 @@ export default function Home() {
           <div className="flex items-center gap-2 sm:gap-2.5">
             <ThemeToggle className="home-theme-toggle" />
             <div className="flex items-center gap-1.5 sm:gap-2">
+              <Tooltip content="退出登录">
+                <button
+                  type="button"
+                  onClick={() => void handleLogout()}
+                  disabled={logoutLoading}
+                  className={`sm:hidden ${headerIconCls} disabled:cursor-wait disabled:opacity-50`}
+                  aria-label="退出登录"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </Tooltip>
+              <Tooltip content="退出登录">
+                <button
+                  type="button"
+                  onClick={() => void handleLogout()}
+                  disabled={logoutLoading}
+                  className={`hidden sm:inline-flex ${headerPillCls} disabled:cursor-wait disabled:opacity-50`}
+                  aria-label="退出登录"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>{logoutLoading ? '退出中…' : '退出登录'}</span>
+                </button>
+              </Tooltip>
               <Tooltip content="支持摸鱼音乐">
                 <a href="https://yucoder.cn/rank/reward" target="_blank" rel="noopener noreferrer" className={`hidden sm:inline-flex ${headerPillCls}`} aria-label="支持摸鱼音乐">
                   <Heart className="h-4 w-4 text-pink-300 fill-current" />

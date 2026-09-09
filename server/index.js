@@ -1977,6 +1977,26 @@ function setIdentityCookieHeaders(res, userId, token, deviceId = null) {
   res.setHeader('Set-Cookie', cookies);
 }
 
+function clearIdentityCookieHeaders(res) {
+  const useSecureCookie = (IS_PRODUCTION && !ALLOW_INSECURE_COOKIES) || res.req?.secure;
+  const secure = useSecureCookie ? '; Secure' : '';
+  const base = `Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`;
+  const cookies = [
+    `${IDENTITY_UID_COOKIE}=; ${base}`,
+    `${IDENTITY_TOKEN_COOKIE}=; ${base}`,
+    `${DEVICE_ID_COOKIE}=; ${base}`,
+  ];
+  if (useSecureCookie) {
+    const embeddedBase = 'Path=/; Max-Age=0; HttpOnly; SameSite=None; Secure; Partitioned';
+    cookies.push(
+      `${EMBEDDED_IDENTITY_UID_COOKIE}=; ${embeddedBase}`,
+      `${EMBEDDED_IDENTITY_TOKEN_COOKIE}=; ${embeddedBase}`,
+      `${EMBEDDED_DEVICE_ID_COOKIE}=; ${embeddedBase}`,
+    );
+  }
+  res.setHeader('Set-Cookie', cookies);
+}
+
 /** 仅读取 HttpOnly 设备 Cookie（不可用 body/localStorage 冒充恢复） */
 function resolveDeviceIdFromCookieHeader(cookieHeader) {
   const cookies = parseCookieHeader(cookieHeader || '');
@@ -2132,6 +2152,11 @@ app.get(['/api/auth/linuxdo/status', '/api/auth/moyu/status'], async (req, res) 
   const roomId = String(req.query?.roomId || '').trim().toUpperCase();
   const bound = identity?.userId ? await getLinuxdoProfileForUser(identity.userId, roomId) : null;
   res.json({ enabled, authenticated: Boolean(identity?.userId && bound), bound });
+});
+
+app.post(['/api/auth/linuxdo/logout', '/api/auth/moyu/logout'], (req, res) => {
+  clearIdentityCookieHeaders(res);
+  res.json({ success: true });
 });
 
 app.get(['/api/auth/linuxdo/start', '/api/auth/moyu/start'], (req, res) => {
