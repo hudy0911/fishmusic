@@ -1,5 +1,22 @@
 import { create } from 'zustand';
 
+export interface UserVipIdentity {
+  isPermanentVip: boolean;
+  currentTitleName: string;
+  effectiveTitle: string;
+  refreshedAt: number;
+}
+
+export interface UserVipPersonalSettings {
+  badgeColor: string | null;
+  borderColor: string | null;
+  welcomeEnabled: boolean | null;
+  welcomeTemplateId: string | null;
+  welcomeCustomText: string;
+  confettiEnabled: boolean | null;
+  updatedAt: number;
+}
+
 interface SiteFeaturesStore {
   /** 管理端是否开放全站共享会员入口 */
   sharedMembershipEnabled: boolean;
@@ -12,8 +29,14 @@ interface SiteFeaturesStore {
   qishuiSvip: boolean;
   musicSourcesEnabled: Record<'netease' | 'tencent' | 'kugou' | 'qishui', boolean>;
   hydrated: boolean;
+  /** 摸鱼岛 OAuth 给出的全局贵宾身份（来自 bootstrap /api/session/bootstrap） */
+  vip: UserVipIdentity;
+  /** 用户在「VIP 设置」中保存的个人样式（颜色 / 欢迎语 / 礼花 / 冷却） */
+  vipPersonal: UserVipPersonalSettings | null;
   setSvipQualityEnabled: (enabled: boolean) => void;
   setPlatformCapabilities: (features: PlatformCapabilities) => void;
+  setVipIdentity: (vip: UserVipIdentity | null | undefined) => void;
+  setVipPersonalSettings: (settings: UserVipPersonalSettings | null) => void;
 }
 
 export interface PlatformCapabilities {
@@ -35,6 +58,8 @@ export const useSiteFeaturesStore = create<SiteFeaturesStore>((set) => ({
   qishuiSvip: false,
   musicSourcesEnabled: { netease: true, tencent: true, kugou: true, qishui: true },
   hydrated: false,
+  vip: { isPermanentVip: false, currentTitleName: '', effectiveTitle: '', refreshedAt: 0 },
+  vipPersonal: null,
   setSvipQualityEnabled: (svipQualityEnabled) => set({
     svipQualityEnabled: { netease: Boolean(svipQualityEnabled), tencent: Boolean(svipQualityEnabled), kugou: Boolean(svipQualityEnabled), qishui: Boolean(svipQualityEnabled) },
     hydrated: true,
@@ -56,6 +81,17 @@ export const useSiteFeaturesStore = create<SiteFeaturesStore>((set) => ({
       ? { ...state.musicSourcesEnabled, ...Object.fromEntries(Object.entries(features.musicSourcesEnabled).map(([key, value]) => [key, Boolean(value)])) } as typeof state.musicSourcesEnabled
       : state.musicSourcesEnabled,
     hydrated: true,
+  })),
+  setVipIdentity: (vip) => set(() => ({
+    vip: vip ? {
+      isPermanentVip: Boolean(vip.isPermanentVip),
+      currentTitleName: String(vip.currentTitleName || ''),
+      effectiveTitle: String(vip.effectiveTitle || (vip.isPermanentVip ? '【贵宾】' : '')),
+      refreshedAt: Number(vip.refreshedAt || 0),
+    } : { isPermanentVip: false, currentTitleName: '', effectiveTitle: '', refreshedAt: 0 },
+  })),
+  setVipPersonalSettings: (settings) => set(() => ({
+    vipPersonal: settings ? { ...settings } : null,
   })),
 }));
 
@@ -79,4 +115,8 @@ export function isSvipQualityEnabled(): boolean {
 export function isPlatformSvipQualityEnabled(source: 'netease' | 'tencent' | 'kugou' | 'qishui'): boolean {
   const state = useSiteFeaturesStore.getState();
   return Boolean(state.svipQualityEnabled[source]);
+}
+
+export function isPermanentVip(): boolean {
+  return useSiteFeaturesStore.getState().vip.isPermanentVip;
 }

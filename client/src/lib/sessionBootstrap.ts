@@ -2,7 +2,7 @@ import { fetchWithTimeout } from '../api/http';
 import { rememberClientId } from './clientId';
 import { getDeviceId } from './deviceId';
 import { setApiSignKey } from './apiSign';
-import { applySiteFeatures } from '../stores/siteFeaturesStore';
+import { applySiteFeatures, useSiteFeaturesStore } from '../stores/siteFeaturesStore';
 import { detectSiteAccessBlockResponse, isSiteAccessBlocked, markSiteAccessBlocked } from './siteAccessGate';
 import {
   extractSoftBlockCode,
@@ -59,10 +59,45 @@ async function requestSessionBootstrap(): Promise<string | null> {
       sharedMembershipEnabled?: boolean;
       musicSourcesEnabled?: Partial<Record<'netease' | 'tencent' | 'kugou' | 'qishui', boolean>>;
     };
+    vip?: {
+      isPermanentVip?: boolean;
+      currentTitleName?: string;
+      effectiveTitle?: string;
+      refreshedAt?: number;
+    };
+    vipPersonal?: {
+      badgeColor?: string | null;
+      borderColor?: string | null;
+      welcomeEnabled?: boolean | null;
+      welcomeTemplateId?: string | null;
+      welcomeCustomText?: string;
+      confettiEnabled?: boolean | null;
+      updatedAt?: number;
+    } | null;
   };
   // 非安全 HTTP 上 Web Crypto 可能不可用；此时服务端也不会要求请求签名。
   setApiSignKey(globalThis.crypto?.subtle ? data.apiSignKey : null);
   applySiteFeatures(data.features);
+  if (data.vip) {
+    useSiteFeaturesStore.getState().setVipIdentity({
+      isPermanentVip: Boolean(data.vip.isPermanentVip),
+      currentTitleName: String(data.vip.currentTitleName || ''),
+      effectiveTitle: String(data.vip.effectiveTitle || ''),
+      refreshedAt: Number(data.vip.refreshedAt || 0),
+    });
+  }
+  if (data.vipPersonal !== undefined) {
+    const p = data.vipPersonal;
+    useSiteFeaturesStore.getState().setVipPersonalSettings(p ? {
+      badgeColor: p.badgeColor ?? null,
+      borderColor: p.borderColor ?? null,
+      welcomeEnabled: p.welcomeEnabled === undefined ? null : Boolean(p.welcomeEnabled),
+      welcomeTemplateId: p.welcomeTemplateId ?? null,
+      welcomeCustomText: String(p.welcomeCustomText || ''),
+      confettiEnabled: p.confettiEnabled === undefined ? null : Boolean(p.confettiEnabled),
+      updatedAt: Number(p.updatedAt || 0),
+    } : null);
+  }
   if (data.clientId) rememberClientId(data.clientId);
   lastBootstrapError = '';
   return data.clientId || null;

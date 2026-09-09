@@ -392,6 +392,7 @@ export default function Home() {
   const nickname = useRoomStore((s) => s.nickname);
   const avatarUrl = useRoomStore((s) => s.avatar_url);
   const { leaveRoom } = useSocket();
+  const isPermanentVip = useSiteFeaturesStore((s) => s.vip.isPermanentVip);
 
   usePageSeo({ path: '/' });
   const siteSeo = useSiteSeoConfig();
@@ -719,6 +720,19 @@ export default function Home() {
                   <a href={adminEntryPath} className={`hidden sm:inline-flex ${headerIconCls}`} aria-label="管理后台">
                     <ShieldCheck className="home-header-icon__shield w-5 h-5" />
                   </a>
+                </Tooltip>
+              )}
+              {isPermanentVip && (
+                <Tooltip content="VIP 样式设置">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/vip-settings')}
+                    data-guide="home-vip"
+                    className={`hidden sm:inline-flex ${headerIconCls}`}
+                    aria-label="VIP 设置"
+                  >
+                    <Crown className="w-5 h-5 text-amber-300" />
+                  </button>
                 </Tooltip>
               )}
             </div>

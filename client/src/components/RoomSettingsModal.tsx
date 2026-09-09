@@ -149,7 +149,8 @@ interface Props {
   onClose: () => void;
   onSaveFmMode: (mode: string, source?: FmSource) => void;
   onSavePlaylistRoaming?: (payload: { platform?: 'netease' | 'qq' | 'kugou' | 'qishui'; input?: string; clear?: boolean; playlistId?: string; playlistSource?: FmSource; playlistName?: string; dedupeByName?: boolean; playlistEnabled?: boolean }) => Promise<{ success: boolean; error?: string }> | void;
-  onOpenMemberModal: () => void;
+  /** 兼容旧房间 VIP 设置入口；新版「贵宾管理」已下线，这里仅供兼容。 */
+  onOpenMemberModal?: () => void;
   onSaveAnnouncement: (options: { enabled: boolean; text: string }) => void;
   onSaveChatHistory: (enabled: boolean) => void;
   onSaveChatShowAvatars: (enabled: boolean) => void;
@@ -339,6 +340,8 @@ export default function RoomSettingsModal({
   onClose,
   onSaveFmMode,
   onSavePlaylistRoaming,
+  // 房间级贵宾已下线，UI 不再调用；保留兼容字段，外部仍可传入
+  // 通过解构后立即赋给 void，绕过 noUnusedLocals 但保留 API 兼容
   onOpenMemberModal,
   onSaveAnnouncement,
   onSaveChatHistory,
@@ -390,6 +393,8 @@ export default function RoomSettingsModal({
   const [wechatUinBound, setWechatUinBound] = useState<WechatUinBinding | null>(identityWechatUinBound);
   const [wechatUinUnbinding, setWechatUinUnbinding] = useState(false);
   const [wechatUinModalMode, setWechatUinModalMode] = useState<'bind' | 'recover' | null>(null);
+  // 房间级贵宾已下线，仅保留兼容字段；标记为已读取
+  void onOpenMemberModal;
   const [linuxdoEnabled, setLinuxdoEnabled] = useState(identityLinuxdoEnabled);
   const [linuxdoBound, setLinuxdoBound] = useState<LinuxdoBinding | null>(identityLinuxdoBound);
   const [linuxdoUnbinding, setLinuxdoUnbinding] = useState(false);
@@ -1350,21 +1355,14 @@ export default function RoomSettingsModal({
             <section>
               <div className="mb-2 flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-amber-400" />
-                <h3 className="text-sm font-medium text-white">贵宾角标</h3>
+                <h3 className="text-sm font-medium text-white">贵宾样式</h3>
               </div>
               <p className="mb-3 text-xs text-netease-muted">
-                房主与管理员可为在线用户赋予角标；进房欢迎与点歌边框自动生效
+                全局贵宾身份由摸鱼岛 OAuth 决定；角标颜色 / 欢迎语 / 礼花 / 冷却由用户本人在「VIP 设置」中自定义。
               </p>
-              <button
-                type="button"
-                onClick={onOpenMemberModal}
-                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.06]"
-              >
-                <span className="text-sm text-white">管理贵宾</span>
-                <span className="text-xs text-netease-muted">
-                  {memberTierCount > 0 ? `已设置 ${memberTierCount} 人` : '未设置'}
-                </span>
-              </button>
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-white/60">
+                房间级贵宾配置已下线，无需在此处调整。{memberTierCount > 0 ? `仍保留 ${memberTierCount} 条历史角标记录，仅用于聊天回放展示。` : ''}
+              </div>
             </section>
           )}
 

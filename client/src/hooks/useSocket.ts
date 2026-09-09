@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chatStore';
 import { useChatSystemToastStore } from '../stores/chatSystemToastStore';
 import { useSongHistoryStore } from '../stores/songHistoryStore';
 import { useAudioStore } from '../stores/audioStore';
+import { useSiteFeaturesStore } from '../stores/siteFeaturesStore';
 import { songKey } from '../api/music';
 
 import type { ChatMention, ChatReplyRef, ChatMessage, FavoriteSong, PlaybackMediaShare, PlaybackState, RoomAiConfig, RoomState, Song, SongHistoryItem } from '../types';
@@ -16,6 +17,7 @@ import { stopSharedAudio } from '../lib/audioElement';
 import { resetDriftController } from '../lib/driftController';
 import { resetPhaseSync } from '../lib/playbackSync';
 import { resetSyncStateMachine } from '../lib/syncStateMachine';
+import { fireWelcomeConfetti } from '../lib/confettiBurst';
 import {
   applySharedPlaybackMedia,
   applySharedPlaybackMediaFromState,
@@ -871,6 +873,24 @@ export function useSocket() {
       useRoomStore.getState().setConnectionInfo(mySocketId, null);
       if (shouldMaintainRoomSession()) {
         scheduleRoomRejoin('connect_error');
+      }
+    });
+
+    s.on('vip_personal_settings_updated', (payload) => {
+      const next = payload?.settings;
+      if (next && typeof next === 'object') {
+        useSiteFeaturesStore.getState().setVipPersonalSettings(next);
+      }
+    });
+
+    s.on('room_vip_entrance', (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      if (payload.confettiEnabled !== false) {
+        try {
+          fireWelcomeConfetti({ source: 'vip-entrance' });
+        } catch {
+          // 礼花是非关键体验，失败忽略
+        }
       }
     });
 

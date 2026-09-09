@@ -332,4 +332,22 @@ export interface AdminRoom {
   } | null;
 }
 
-export type AdminTabId = 'overview' | 'rooms' | 'bans' | 'reports' | 'notify' | 'donations' | 'settings' | 'audit';
+export type AdminTabId = 'overview' | 'rooms' | 'bans' | 'reports' | 'notify' | 'donations' | 'settings' | 'audit' | 'vip';
+
+export interface VipGlobalConfig {
+  badgeColor: string;
+  borderColor: string;
+  welcomeEnabled: boolean;
+  welcomeTemplateId: string;
+  welcomeCustomText: string;
+  confettiEnabled: boolean;
+  welcomeCooldownSec: number;
+}
+
+export interface VipUserEntry {
+  userId: string;
+  isPermanentVip: boolean;
+  currentTitleName: string;
+  donationAmount: string;
+  refreshedAt: number;
+}
