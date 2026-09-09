@@ -52,56 +52,59 @@ export default function AmbientCoverLayers({ coverUrl, className = 'absolute ins
   }, [displayUrl]);
 
   return (
-    <div className={`${className} overflow-hidden`} aria-hidden>
+    <div className={`${className} ambient-cover overflow-hidden`} aria-hidden>
       <div className="absolute inset-0 bg-surface-canvas" />
 
       {resourceUrl ? (
-        <img
-          key={resourceUrl}
-          src={resourceUrl}
-          alt=""
-          referrerPolicy="no-referrer"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover transition-[opacity,filter] duration-700"
-          style={{
-            opacity: loaded ? tuning.coverOpacity : 0,
-            filter: `blur(46px) brightness(${tuning.imgBrightness}) saturate(1.32) contrast(.96)`,
-            transform: 'scale(1.14)',
-          }}
-          ref={(img) => {
-            // 缓存命中时浏览器可能不再触发 onLoad，需主动检测 complete
-            if (img?.complete && img.naturalWidth > 0 && loadedFor !== resourceUrl) {
-              queueMicrotask(() => setLoadedFor(resourceUrl));
-            }
-          }}
-          onLoad={(event) => {
-            setLoadedFor(resourceUrl);
-            setTuning(tuneCoverBackdrop(measureCoverLuminance(event.currentTarget)));
-          }}
-          onError={() => {
-            if (stage === 'primary' && proxyUrl) {
-              setStageFor({ id: coverUrl, stage: 'proxy' });
-              return;
-            }
-            setLoadedFor(null);
-          }}
-        />
+        <div className="ambient-cover-image-layer absolute inset-0 transition-opacity duration-700">
+          <img
+            key={resourceUrl}
+            src={resourceUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            decoding="async"
+            className="ambient-cover-image absolute inset-0 h-full w-full object-cover transition-[opacity,filter] duration-700"
+            style={{
+              opacity: loaded ? tuning.coverOpacity : 0,
+              '--ambient-cover-brightness': tuning.imgBrightness,
+              transform: 'scale(1.14)',
+            } as React.CSSProperties}
+            ref={(img) => {
+              // 缓存命中时浏览器可能不再触发 onLoad，需主动检测 complete
+              if (img?.complete && img.naturalWidth > 0 && loadedFor !== resourceUrl) {
+                queueMicrotask(() => setLoadedFor(resourceUrl));
+              }
+            }}
+            onLoad={(event) => {
+              setLoadedFor(resourceUrl);
+              setTuning(tuneCoverBackdrop(measureCoverLuminance(event.currentTarget)));
+            }}
+            onError={() => {
+              if (stage === 'primary' && proxyUrl) {
+                setStageFor({ id: coverUrl, stage: 'proxy' });
+                return;
+              }
+              setLoadedFor(null);
+            }}
+          />
+        </div>
       ) : null}
 
       <div
-        className="absolute inset-0 transition-[background-color] duration-700"
-        style={{ backgroundColor: `rgba(0, 0, 0, ${tuning.baseOverlay})` }}
+        className="ambient-cover-base absolute inset-0 transition-[background-color] duration-700"
+        style={{ '--ambient-cover-base-opacity': tuning.baseOverlay } as React.CSSProperties}
       />
 
       <div
-        className="absolute inset-0 transition-[background] duration-700"
+        className="ambient-cover-gradient absolute inset-0 transition-[background] duration-700"
         style={{
-          background: `linear-gradient(to bottom, rgba(0, 0, 0, ${tuning.gradientTop}), transparent, rgba(0, 0, 0, ${tuning.gradientBottom}))`,
-        }}
+          '--ambient-cover-gradient-top': tuning.gradientTop,
+          '--ambient-cover-gradient-bottom': tuning.gradientBottom,
+        } as React.CSSProperties}
       />
 
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_32%,rgba(255,255,255,0.08),transparent_42%),linear-gradient(90deg,rgba(0,0,0,.25),transparent_25%,transparent_75%,rgba(0,0,0,.25))]" />
-      <div className="absolute inset-0 shadow-[inset_0_0_180px_rgba(0,0,0,.42)]" />
+      <div className="ambient-cover-vignette absolute inset-0" />
+      <div className="ambient-cover-finish absolute inset-0" />
     </div>
   );
 }

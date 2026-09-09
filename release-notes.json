@@ -5,5 +5,5 @@
     "优化 歌曲切换后的播放进度同步",
     "优化 提示交互统一"
   ],
-  "forcePrompt": true
+  "forcePrompt": false
 }

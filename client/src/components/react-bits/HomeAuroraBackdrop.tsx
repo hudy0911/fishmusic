@@ -27,8 +27,8 @@ function canUseAurora(): boolean {
 function StaticGlow() {
   return (
     <>
-      <div className="absolute top-[-20%] left-[10%] h-[600px] w-[600px] rounded-full bg-netease-red/5 blur-[140px] mix-blend-screen" />
-      <div className="absolute bottom-[-10%] right-[10%] h-[500px] w-[500px] rounded-full bg-purple-600/5 blur-[120px] mix-blend-screen" />
+      <div className="home-aurora-static-glow absolute top-[-20%] left-[10%] h-[600px] w-[600px] rounded-full bg-netease-red/5 blur-[140px] mix-blend-screen" />
+      <div className="home-aurora-static-glow absolute bottom-[-10%] right-[10%] h-[500px] w-[500px] rounded-full bg-purple-600/5 blur-[120px] mix-blend-screen" />
     </>
   );
 }
@@ -45,22 +45,15 @@ export default function HomeAuroraBackdrop() {
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       {enabled ? (
         <Suspense fallback={<StaticGlow />}>
-          <div className="absolute inset-0 opacity-[0.68]">
+          <div className="home-aurora-field absolute inset-0">
             <Aurora colorStops={BRAND_STOPS} amplitude={1.05} blend={0.62} speed={0.55} />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#050505]/35 to-[#050505]/85" />
+          <div className="home-aurora-fade absolute inset-0" />
         </Suspense>
       ) : (
         <StaticGlow />
       )}
-      <div
-        className="absolute inset-0 opacity-[0.025]"
-        style={{
-          backgroundImage:
-            'repeating-radial-gradient(circle at 17% 23%, rgba(255,255,255,0.34) 0 0.55px, transparent 0.8px 3px)',
-          backgroundSize: '5px 5px',
-        }}
-      />
+      <div className="home-aurora-noise absolute inset-0 opacity-[0.025]" />
     </div>
   );
 }

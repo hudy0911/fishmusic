@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useCallback } from 'react';
-import { Flame, Plus, Loader2 } from 'lucide-react';
+import { Flame, Plus, Loader2, PanelLeftClose } from 'lucide-react';
 import type { SearchResult } from '../types';
 import { songKey } from '../api/music';
 import {
@@ -19,6 +19,7 @@ interface Props {
   embedded?: boolean;
   compactLimit?: number;
   neteaseEnabled?: boolean;
+  onCollapse?: () => void;
 }
 
 const TOPLIST_LIMIT = 200;
@@ -186,6 +187,7 @@ export default memo(function HotSongPanel({
   embedded = false,
   compactLimit = COMPACT_LIMIT,
   neteaseEnabled = true,
+  onCollapse,
 }: Props) {
   const [source, setSource] = useState<HotRankSource>(() => neteaseEnabled ? readStoredSource() : 'platform');
   const cached = source === 'netease' ? peekNeteaseHotToplist(TOPLIST_LIMIT) : null;
@@ -373,6 +375,18 @@ export default memo(function HotSongPanel({
       <Flame className="h-3.5 w-3.5 flex-shrink-0 text-orange-400/90" />
       <h2 className="min-w-0 flex-1 truncate text-sm font-medium text-white">{currentView.title}</h2>
       <SourceSwitch source={source} onChange={handleSourceChange} neteaseEnabled={neteaseEnabled} />
+      {onCollapse && (
+        <Tooltip content="收起热榜" side="bottom">
+          <button
+            type="button"
+            onClick={onCollapse}
+            className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-netease-muted transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="收起热榜"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </Tooltip>
+      )}
     </div>
   );
 

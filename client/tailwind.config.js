@@ -6,17 +6,18 @@ export default {
       colors: {
         netease: {
           red: 'rgb(var(--om-accent-rgb) / <alpha-value>)',
-          dark: '#09090b',
-          card: '#18181d',
-          hover: '#202026',
-          border: '#2b2b33',
-          muted: '#a1a1aa',
+          dark: 'rgb(var(--om-canvas-rgb) / <alpha-value>)',
+          bg: 'rgb(var(--om-surface-rgb) / <alpha-value>)',
+          card: 'rgb(var(--om-surface-raised-rgb) / <alpha-value>)',
+          hover: 'rgb(var(--om-surface-hover-rgb) / <alpha-value>)',
+          border: 'rgb(var(--om-border-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--om-muted-rgb) / <alpha-value>)',
         },
         surface: {
-          canvas: '#09090b',
-          base: '#111114',
-          raised: '#18181d',
-          hover: '#202026',
+          canvas: 'rgb(var(--om-canvas-rgb) / <alpha-value>)',
+          base: 'rgb(var(--om-surface-rgb) / <alpha-value>)',
+          raised: 'rgb(var(--om-surface-raised-rgb) / <alpha-value>)',
+          hover: 'rgb(var(--om-surface-hover-rgb) / <alpha-value>)',
         },
       },
       fontFamily: {

@@ -6,7 +6,7 @@ import { mergeFavoriteImportStats } from '../lib/favoriteImport';
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
-import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Crown } from 'lucide-react';
+import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Crown, Flame } from 'lucide-react';
 
 import { searchAllSongs, getAvailableSources, listRooms, type SearchFilterMode } from '../api/music';
 import { importPlaylist, searchPlaylists, type PlaylistSearchItem, type PlaylistPlatform, type PlaylistChannelFilter as PlaylistChannelFilterMode } from '../api/music/playlist';
@@ -80,6 +80,7 @@ import Toast from '../components/Toast';
 import QueueSystemToast from '../components/QueueSystemToast';
 import Tooltip from '../components/Tooltip';
 import RoomThemeColorPicker from '../components/RoomThemeColorPicker';
+import ThemeToggle from '../components/ThemeToggle';
 import UserRoleMarks from '../components/UserRoleMarks';
 import { getRecentRoomIds, rememberRoomVisit } from '../lib/recentRooms';
 import { sortRoomSwitcherRooms } from '../lib/roomSwitcher';
@@ -232,6 +233,16 @@ interface PlaylistSearchBackup {
 
 type SearchDetailOrigin = 'radio' | 'recommend-playlist';
 
+const HOT_PANEL_COLLAPSED_STORAGE_KEY = 'openmusic:room-hot-panel-collapsed';
+
+function readHotPanelCollapsed(): boolean {
+  try {
+    return localStorage.getItem(HOT_PANEL_COLLAPSED_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 
 export default function Room() {
 
@@ -376,6 +387,15 @@ export default function Room() {
   const [visualFxDragging, setVisualFxDragging] = useState(false);
   const isLgUp = useMediaQuery('(min-width: 1024px)');
   const isSmUp = useMediaQuery('(min-width: 640px)');
+  const [hotPanelCollapsed, setHotPanelCollapsed] = useState(readHotPanelCollapsed);
+  const setDesktopHotPanelCollapsed = useCallback((collapsed: boolean) => {
+    setHotPanelCollapsed(collapsed);
+    try {
+      localStorage.setItem(HOT_PANEL_COLLAPSED_STORAGE_KEY, collapsed ? '1' : '0');
+    } catch {
+      // private mode
+    }
+  }, []);
   const showImmersiveEntry = isLgUp && !isMobileDevice() && !pureMode;
   const [favoritesOpen, setFavoritesOpen] = useState(false);
   const [songHistoryOpen, setSongHistoryOpen] = useState(false);
@@ -2681,7 +2701,7 @@ export default function Room() {
       </div>
     )}>
     <div
-      className={`room-ambient-root relative isolate flex h-full flex-col overflow-hidden ${
+      className={`room-ambient-root relative isolate flex h-full flex-col overflow-hidden ${immersiveMode ? 'om-force-dark' : ''} ${
         ambientBackgroundRetained ? 'room-ambient-root--transparent' : ''
       }`}
       style={immersiveTransition || immersiveShellMotion ? immersiveTimingCssVars() : undefined}
@@ -3148,6 +3168,8 @@ export default function Room() {
 
               <RoomThemeColorPicker />
 
+              <ThemeToggle />
+
               {!isMobileDevice() && (
               <Tooltip side="bottom" content={pureMode ? '退出纯净模式（电脑端右侧滑入聊天）' : '纯净模式：隐藏动效与热榜，保留搜索与播放队列；标签页低调伪装'}>
                 <button
@@ -3337,16 +3359,38 @@ export default function Room() {
 
       <div className={`relative z-10 flex-1 min-h-0 mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-4 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] overflow-y-auto lg:overflow-hidden ${pureMode ? 'max-w-3xl' : 'max-w-[1680px]'}`}>
 
-          <div className={`flex flex-col gap-3 lg:gap-4 lg:h-full lg:min-h-0 ${pureMode ? '' : 'lg:grid lg:grid-cols-[320px_minmax(0,1fr)_340px]'}`}>
+          <div className={`flex flex-col gap-3 lg:h-full lg:min-h-0 lg:gap-4 ${pureMode ? '' : `lg:grid ${hotPanelCollapsed ? 'lg:grid-cols-[48px_minmax(0,1fr)_340px]' : 'lg:grid-cols-[320px_minmax(0,1fr)_340px]'} lg:transition-[grid-template-columns] lg:duration-300 lg:ease-out`}`}>
 
           {/* 左侧：网易热榜 */}
           {isLgUp && !pureMode && (
-            <div
-              data-guide="room-hot"
-              className="surface-panel room-main-panel room-main-panel--hot order-0 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl lg:h-full"
-            >
-              <HotSongPanel embedded addingId={addingId} onAdd={handleAdd} neteaseEnabled={neteaseEnabled} />
-            </div>
+            hotPanelCollapsed ? (
+              <div className="order-0 flex min-h-0 min-w-0 justify-center lg:h-full" data-guide="room-hot">
+                <Tooltip content="展开热榜" side="right">
+                  <button
+                    type="button"
+                    onClick={() => setDesktopHotPanelCollapsed(false)}
+                    className="room-hot-collapsed-trigger inline-flex h-12 w-12 items-center justify-center rounded-2xl border text-orange-400 transition-[color,background,border-color,transform,box-shadow] hover:-translate-y-0.5 hover:text-orange-300"
+                    aria-label="展开热榜"
+                    aria-expanded="false"
+                  >
+                    <Flame className="h-5 w-5" />
+                  </button>
+                </Tooltip>
+              </div>
+            ) : (
+              <div
+                data-guide="room-hot"
+                className="surface-panel room-main-panel room-main-panel--hot order-0 flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl lg:h-full"
+              >
+                <HotSongPanel
+                  embedded
+                  addingId={addingId}
+                  onAdd={handleAdd}
+                  neteaseEnabled={neteaseEnabled}
+                  onCollapse={() => setDesktopHotPanelCollapsed(true)}
+                />
+              </div>
+            )
           )}
 
           {/* 中间：搜索 + 播放队列 */}
