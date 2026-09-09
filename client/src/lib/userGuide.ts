@@ -125,7 +125,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: 'home-vip',
     scope: 'home',
-    title: ' VIP 样式设置',
+    title: 'VIP 样式设置',
     body: '摸鱼岛永久贵宾：顶部出现「VIP 设置」按钮\n角标颜色 / 边框颜色 / 欢迎语 / 礼花 / 冷却：由你本人定制，回退后台默认',
     side: 'bottom',
   },

@@ -109,6 +109,7 @@ import {
   setRoomMaxAdmins,
   setRoomPlaybackRate,
   postJoinNoticeMessage,
+  setBroadcastIo,
   shouldMuteJoinAnnouncements,
   wasKnownRoomUser,
   setRoomFmMode,
@@ -181,6 +182,7 @@ import {
   cancelRoomPermanentRequest,
   getRoomAiSnapshot,
   skipSongOnBehalfOfUser,
+  persistRoomById,
   requestSkipOnBehalfOfUser,
 } from './roomManager.js';
 import {
@@ -242,6 +244,9 @@ import {
   unbindLinuxdoForUser,
   clearLinuxdoBindingsForRoom,
 } from './yucoderAuth.js';
+import { saveVipProfile, getVipProfile, resolveEffectiveVipTitle } from './vipProfile.js';
+import { getVipPersonalSettings, saveVipPersonalSettings } from './vipSettings.js';
+import { resolveVipTierForUser } from './vipWelcome.js';
 import {
   isGithubConfigured,
   signGithubState,
@@ -687,6 +692,7 @@ const limitSessionBootstrap = createRateLimiter({ windowMs: 60_000, max: 90 });
 const limitNewSessionBootstrap = createRateLimiter({ windowMs: 60_000, max: 45 });
 const limitGithubAuth = createRateLimiter({ windowMs: 60_000, max: 10 });
 const limitWechatUinAuth = createRateLimiter({ windowMs: 10 * 60_000, max: 10 });
+const limitPersonalVipWrite = createRateLimiter({ windowMs: 60_000, max: 10 });
 const socketRateLog = createLogger('socket-rate-limit');
 let lastSocketRateRedisErrorAt = 0;
 const distributedSocketRateLimiter = createDistributedSocketRateLimiter({
@@ -2008,9 +2014,31 @@ function requireSessionIdentity(req, res) {
   return identity;
 }
 
-function sendBootstrapResponse(res, userId, iat, token, deviceId = null) {
+async function readVipIdentitySync(userId) {
+  if (!userId) return { vip: { isPermanentVip: false, currentTitleName: '', effectiveTitle: '', refreshedAt: 0 }, vipPersonal: null };
+  try {
+    const profile = await getVipProfile(userId);
+    const personal = await getVipPersonalSettings(userId);
+    const isPermanentVip = Boolean(profile?.isPermanentVip);
+    return {
+      vip: profile ? {
+        isPermanentVip,
+        currentTitleName: String(profile.currentTitleName || ''),
+        effectiveTitle: isPermanentVip ? resolveEffectiveVipTitle(profile) : '',
+        refreshedAt: Number(profile.refreshedAt || 0),
+      } : { isPermanentVip: false, currentTitleName: '', effectiveTitle: '', refreshedAt: 0 },
+      vipPersonal: personal || null,
+    };
+  } catch (err) {
+    console.error('读取 VIP 概要失败:', err?.message || err);
+    return { vip: { isPermanentVip: false, currentTitleName: '', effectiveTitle: '', refreshedAt: 0 }, vipPersonal: null };
+  }
+}
+
+async function sendBootstrapResponse(res, userId, iat, token, deviceId = null) {
   setIdentityCookieHeaders(res, userId, token, deviceId);
   const runtime = getRuntimeConfig();
+  const vipIdentity = await readVipIdentitySync(userId);
   const payload = {
     clientId: userId,
     features: {
@@ -2018,6 +2046,8 @@ function sendBootstrapResponse(res, userId, iat, token, deviceId = null) {
       sharedMembershipEnabled: Boolean(runtime.sharedMembershipEnabled),
       musicSourcesEnabled: runtime.musicSourcesEnabled,
     },
+    vip: vipIdentity.vip,
+    vipPersonal: vipIdentity.vipPersonal,
   };
   const requireRequestSign = res.req?.secure || !ALLOW_INSECURE_HTTP_API;
   if (isApiSignRequired() && requireRequestSign) {
@@ -2055,7 +2085,7 @@ app.post('/api/session/bootstrap', async (req, res) => {
     const shouldRenew = existing.expiresAt - now <= SESSION_RENEW_WITHIN_SEC;
     const signIat = shouldRenew ? now : existing.iat;
     const token = signClientId(existing.userId, signIat);
-    return sendBootstrapResponse(res, existing.userId, signIat, token, deviceId);
+    return await sendBootstrapResponse(res, existing.userId, signIat, token, deviceId);
   }
 
   // 无身份 Cookie：仅允许 HttpOnly openmusic_did 恢复同一 userId
@@ -2064,7 +2094,7 @@ app.post('/api/session/bootstrap', async (req, res) => {
     if (boundUserId) {
       await linkDeviceToUser(cookieDeviceId, boundUserId);
       const signIat = now;
-      return sendBootstrapResponse(
+      return await sendBootstrapResponse(
         res,
         boundUserId,
         signIat,
@@ -2087,7 +2117,7 @@ app.post('/api/session/bootstrap', async (req, res) => {
   const deviceId = cookieDeviceId || createServerClientId();
   await linkDeviceToUser(deviceId, userId);
   const signIat = now;
-  return sendBootstrapResponse(res, userId, signIat, signClientId(userId, signIat), deviceId);
+  return await sendBootstrapResponse(res, userId, signIat, signClientId(userId, signIat), deviceId);
 });
 
 // ---------- Linux.do OAuth：房主身份绑定 / 找回 ----------
@@ -2174,6 +2204,7 @@ app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, r
         await unbindLinuxdoForUser(identity.userId, state.roomId);
         return fail(returnPath, 'denied');
       }
+      await saveVipProfile(identity.userId, profile);
     } catch (err) {
       console.error('摸鱼岛绑定写入失败:', err?.message || err);
       return fail(returnPath, 'error');
@@ -2192,6 +2223,7 @@ app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, r
         return fail(returnPath, 'error');
       }
     }
+    await saveVipProfile(userId, profile);
     const now = Math.floor(Date.now() / 1000);
     const cookieDeviceId = resolveDeviceIdFromCookieHeader(req.headers?.cookie || '');
     const deviceId = cookieDeviceId || createServerClientId();
@@ -2203,6 +2235,7 @@ app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, r
   // recover：查已绑定的 userId，转移当前房间房主关系并重新签发身份 Cookie
   const boundUserId = await getUserIdForLinuxdo(profile.id, state.roomId);
   if (!boundUserId) return fail(returnPath, 'notfound');
+  await saveVipProfile(boundUserId, profile);
   const recovery = recoverRoomOwner(state.roomId, boundUserId, resolveDeviceIdFromCookieHeader(req.headers?.cookie || '') || createServerClientId());
   if (recovery.error) return fail(returnPath, recovery.error === '房间不存在' ? 'room-notfound' : 'denied');
 
@@ -2408,6 +2441,48 @@ app.post('/api/auth/wechat-uin/unbind', async (req, res) => {
   res.json({ success: true });
 });
 
+// ---------- VIP 个人设置 ----------
+// 颜色/欢迎语/礼花由个人控制；冷却时间仅后台可配；最终角标名仍取自摸鱼岛 OAuth（isPermanentVip + currentTitleName）。
+
+app.get('/api/me/vip-settings', async (req, res) => {
+  const identity = requireSessionIdentity(req, res);
+  if (!identity) return;
+  const [profile, personal, defaults] = await Promise.all([
+    getVipProfile(identity.userId),
+    getVipPersonalSettings(identity.userId),
+    Promise.resolve(getRuntimeConfig().vipGlobalDefaults),
+  ]);
+  // 只返回个人设置页需要的字段；冷却时间由后台控制，不暴露给个人。
+  const { welcomeCooldownSec: _ignored, ...safeDefaults } = defaults;
+  res.json({
+    isPermanentVip: Boolean(profile?.isPermanentVip),
+    currentTitleName: String(profile?.currentTitleName || ''),
+    effectiveTitle: profile?.isPermanentVip ? resolveEffectiveVipTitle(profile) : '',
+    settings: personal || null,
+    defaults: safeDefaults,
+  });
+});
+
+app.put('/api/me/vip-settings', async (req, res) => {
+  const identity = requireSessionIdentity(req, res);
+  if (!identity) return;
+  const ip = getRequestIp(req);
+  if (!limitPersonalVipWrite(`vip-settings:${ip}:${identity.userId}`)) {
+    return res.status(429).json({ error: '保存过于频繁，请稍后再试' });
+  }
+  const result = await saveVipPersonalSettings(identity.userId, req.body || {});
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  // 通过 socket 通知本人所有连接，确保多端实时同步
+  broadcastVipPersonalSettingsToUser(identity.userId, result.settings);
+  // 同步到该用户当前所在的所有房间，让队列 / 成员列表 / 聊天气泡的 VIP 标识/边框立即更新
+  syncGlobalVipTierToUserRooms(identity.userId).catch((err) => {
+    console.error('同步全局 VIP 标识到房间失败:', err?.message || err);
+  });
+  res.json({ success: true, settings: result.settings });
+});
+
 app.post('/api/error-reports', async (req, res) => {
   const identity = resolveIdentityFromRequest(req);
   if (!identity?.userId) {
@@ -2416,9 +2491,7 @@ app.post('/api/error-reports', async (req, res) => {
   const ip = getRequestIp(req);
   if (!limitErrorReport(`error-report:${ip}:${identity.userId}`)) {
     return res.status(429).json({ error: '上报过于频繁，请稍后再试' });
-  }
-
-  const result = await createErrorReport({
+  }  const result = await createErrorReport({
     type: req.body?.type,
     description: req.body?.description,
     snapshot: req.body?.snapshot,
@@ -2896,6 +2969,74 @@ function getSocketUserId(socket) {
   return socketToUserId.get(socket.id) || null;
 }
 
+/** 向指定 userId 的所有 socket 广播个人 VIP 设置更新（多端同步） */
+function broadcastVipPersonalSettingsToUser(userId, settings) {
+  const id = String(userId || '').trim();
+  if (!id || !io) return 0;
+  let delivered = 0;
+  for (const [sid, uid] of socketToUserId.entries()) {
+    if (uid !== id) continue;
+    const sock = io.sockets.sockets.get(sid);
+    if (!sock) continue;
+    sock.emit('vip_personal_settings_updated', { settings });
+    delivered += 1;
+  }
+  return delivered;
+}
+
+/** 把全局 VIP 颜色同步进 userId 当前所在的所有房间，并触发房间广播。 */
+async function syncGlobalVipTierToUserRooms(userId) {
+  if (!io) return 0;
+  const id = String(userId || '').trim();
+  if (!id) return 0;
+  const roomIds = new Set();
+  for (const [sid, uid] of socketToUserId.entries()) {
+    if (uid !== id) continue;
+    const rid = socketToRoom.get(sid);
+    if (rid) roomIds.add(rid);
+  }
+  if (roomIds.size === 0) return 0;
+  let updated = 0;
+  for (const roomId of roomIds) {
+    const room = getRoomInternal(roomId);
+    if (!room) continue;
+    // 跳过：房间已有非全局来源的 tier，避免覆盖房主手动配置的样式。
+    const existing = room.memberTiers?.get(id);
+    if (existing && existing.source && existing.source !== 'global-vip') continue;
+    const [profile, personal, defaults] = await Promise.all([
+      getVipProfile(id),
+      getVipPersonalSettings(id),
+      Promise.resolve(getRuntimeConfig().vipGlobalDefaults),
+    ]);
+    const vipTier = resolveVipTierForUser({ profile, personal, defaults });
+    if (!vipTier) {
+      // VIP 已被取消：清理房间 tier，避免「已撤销 VIP 但仍显示标识」
+      if (existing && existing.source === 'global-vip') {
+        room.memberTiers.delete(id);
+        updated += 1;
+      }
+      continue;
+    }
+    if (!room.memberTiers) room.memberTiers = new Map();
+    room.memberTiers.set(id, {
+      badgeLabel: vipTier.badgeLabel,
+      badgeColor: vipTier.badgeColor,
+      borderStyleId: vipTier.borderStyleId,
+      borderColor: vipTier.borderColor,
+      assignedAt: Date.now(),
+      source: 'global-vip',
+    });
+    updated += 1;
+  }
+  if (updated > 0) {
+    for (const roomId of roomIds) {
+      try { persistRoomById(roomId); } catch (err) { console.error('持久化房间失败:', err?.message || err); }
+      broadcastRoomUpdate(roomId, { immediate: true });
+    }
+  }
+  return updated;
+}
+
 function getSocketRatePrincipal(socket) {
   const roomId = socketToRoom.get(socket.id);
   const socketUserId = getSocketUserId(socket);
@@ -3177,6 +3318,9 @@ setOnRoomStructureChanged((roomId) => {
   broadcastPlaybackState(roomId);
 });
 
+// 注入 io 实例供 roomManager 在 VIP 入房时广播 room_vip_entrance
+setBroadcastIo(io);
+
 function emitRoomAndPlayback(roomId, room) {
   // 切歌/队列结构变化：立即下发完整 room + playback
   broadcastRoomUpdate(roomId, { immediate: true });
@@ -3427,7 +3571,7 @@ io.on('connection', (socket) => {
     });
     const clientIp = boundClientNetwork.ip || getClientIp(socket);
     const location = boundClientNetwork.location || fallbackLocationForIp(clientIp);
-    const joinedRoom = addUser(id, userId, nickname, {
+    const joinedRoom = await addUser(id, userId, nickname, {
       readOnly: Boolean(readOnly),
       connectionId: socket.id,
       location,
@@ -3448,7 +3592,6 @@ io.on('connection', (socket) => {
     socketToUserId.set(socket.id, userId);
     socket.join(id);
 
-    const welcomeMessage = muteJoinAnnouncements ? null : postMemberWelcomeMessage(id, userId);
     const joinNoticeMessage = muteJoinAnnouncements ? null : postJoinNoticeMessage(id, userId);
 
     // 无当前歌曲且队列为空时，加入后会异步拉取随机歌曲，先告知客户端"加载中"，
@@ -3485,12 +3628,19 @@ io.on('connection', (socket) => {
       if (location) {
         socket.to(id).emit('user_location', { userId, location });
       }
-      if (welcomeMessage) {
-        // 含进房者本人：全员都能收到迎宾，前端再放礼花
-        io.to(id).emit('chat_message', welcomeMessage);
-      }
       if (joinNoticeMessage) {
         socket.to(id).emit('chat_message', joinNoticeMessage);
+      }
+      // VIP 全局迎宾需要异步读 Redis/合并设置，链式处理
+      if (!muteJoinAnnouncements) {
+        void postMemberWelcomeMessage(id, userId).then((welcomeMessage) => {
+          if (welcomeMessage) {
+            // 含进房者本人：全员都能收到迎宾，前端再放礼花
+            io.to(id).emit('chat_message', welcomeMessage);
+          }
+        }).catch((err) => {
+          console.error('VIP 迎宾发送失败:', err?.message || err);
+        });
       }
       // 若管理员已给出解决方案且用户尚未确认，进房时补推弹窗
       if (!readOnly && userId) {
@@ -4345,81 +4495,30 @@ io.on('connection', (socket) => {
   socket.on('set_room_member_tier', ({ userId, tier }, callback) => {
     if (rejectReadOnly(socket, callback)) return;
     if (rejectRateLimited(socket, limitSocketAction, 'set_room_member_tier', callback)) return;
-
-    const roomId = socketToRoom.get(socket.id);
-    if (!roomId) {
-      callback?.({ success: false, error: '未加入房间' });
-      return;
-    }
-
-    const result = setRoomMemberTier(roomId, getSocketUserId(socket), userId, tier, socket.id);
-    if (result.error) {
-      callback?.({ success: false, error: result.error });
-      return;
-    }
-
-    broadcastRoomUpdate(roomId);
-    callback?.({ success: true, room: getViewerRoomPayload(socket, roomId) });
+    // 房间级贵宾已废弃：全局 VIP 由摸鱼岛 OAuth 决定；个人颜色/欢迎语通过 /api/me/vip-settings 设置
+    callback?.({ success: false, error: 'vip_room_legacy_disabled', message: '房间级贵宾已下线，请在个人菜单中设置 VIP 样式' });
+    return;
   });
 
   socket.on('remove_room_member_tier', ({ userId }, callback) => {
     if (rejectReadOnly(socket, callback)) return;
     if (rejectRateLimited(socket, limitSocketAction, 'remove_room_member_tier', callback)) return;
-
-    const roomId = socketToRoom.get(socket.id);
-    if (!roomId) {
-      callback?.({ success: false, error: '未加入房间' });
-      return;
-    }
-
-    const result = removeRoomMemberTier(roomId, getSocketUserId(socket), userId, socket.id);
-    if (result.error) {
-      callback?.({ success: false, error: result.error });
-      return;
-    }
-
-    broadcastRoomUpdate(roomId);
-    callback?.({ success: true, room: getViewerRoomPayload(socket, roomId) });
+    callback?.({ success: false, error: 'vip_room_legacy_disabled', message: '房间级贵宾已下线' });
+    return;
   });
 
   socket.on('set_room_admin_self_manage_member_tier', ({ enabled }, callback) => {
     if (rejectReadOnly(socket, callback)) return;
     if (rejectRateLimited(socket, limitSocketAction, 'set_room_admin_self_manage_member_tier', callback)) return;
-
-    const roomId = socketToRoom.get(socket.id);
-    if (!roomId) {
-      callback?.({ success: false, error: '未加入房间' });
-      return;
-    }
-
-    const result = setRoomAdminSelfManageMemberTier(roomId, getSocketUserId(socket), enabled, socket.id);
-    if (result.error) {
-      callback?.({ success: false, error: result.error });
-      return;
-    }
-
-    broadcastRoomUpdate(roomId);
-    callback?.({ success: true, room: getViewerRoomPayload(socket, roomId) });
+    callback?.({ success: false, error: 'vip_room_legacy_disabled', message: '房间级贵宾已下线' });
+    return;
   });
 
   socket.on('set_room_member_settings', (settings, callback) => {
     if (rejectReadOnly(socket, callback)) return;
     if (rejectRateLimited(socket, limitSocketAction, 'set_room_member_settings', callback)) return;
-
-    const roomId = socketToRoom.get(socket.id);
-    if (!roomId) {
-      callback?.({ success: false, error: '未加入房间' });
-      return;
-    }
-
-    const result = setRoomMemberSettings(roomId, getSocketUserId(socket), settings, socket.id);
-    if (result.error) {
-      callback?.({ success: false, error: result.error });
-      return;
-    }
-
-    broadcastRoomUpdate(roomId);
-    callback?.({ success: true, room: getViewerRoomPayload(socket, roomId) });
+    callback?.({ success: false, error: 'vip_room_legacy_disabled', message: '房间级迎宾已下线，欢迎语由全局默认 + 个人设置控制' });
+    return;
   });
 
   socket.on('set_chat_mute', ({ muteAll, userId, muted }, callback) => {
