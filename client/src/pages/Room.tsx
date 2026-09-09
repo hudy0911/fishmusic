@@ -6,7 +6,7 @@ import { mergeFavoriteImportStats } from '../lib/favoriteImport';
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
-import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Flame } from 'lucide-react';
+import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Flame, Crown } from 'lucide-react';
 
 import { searchAllSongs, getAvailableSources, listRooms, type SearchFilterMode } from '../api/music';
 import { importPlaylist, searchPlaylists, type PlaylistSearchItem, type PlaylistPlatform, type PlaylistChannelFilter as PlaylistChannelFilterMode } from '../api/music/playlist';
@@ -437,6 +437,7 @@ export default function Room() {
   const [memberOpen, setMemberOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const sharedMembershipEnabled = useSiteFeaturesStore((s) => s.sharedMembershipEnabled);
+  const isPermanentVip = useSiteFeaturesStore((s) => s.vip.isPermanentVip);
   const [memberSaving, setMemberSaving] = useState(false);
   const [songRequestSaving, setSongRequestSaving] = useState(false);
   const [chatHistorySaving, setChatHistorySaving] = useState(false);
@@ -3336,6 +3337,21 @@ export default function Room() {
                   <span className="hidden sm:inline">退出房间</span>
                 </button>
               </Tooltip>
+
+              {isPermanentVip && (
+                <Tooltip side="bottom" content="VIP 样式设置">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/vip-settings')}
+                    data-guide="room-vip"
+                    className="flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-netease-card"
+                    aria-label="VIP 设置"
+                  >
+                    <Crown className="w-4 h-4" />
+                    <span className="hidden sm:inline">VIP 设置</span>
+                  </button>
+                </Tooltip>
+              )}
 
             </div>
 

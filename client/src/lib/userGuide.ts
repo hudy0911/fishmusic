@@ -13,6 +13,7 @@ export type GuideFeatureId =
   | 'home-create'
   | 'home-join'
   | 'home-lobby'
+  | 'home-vip'
   | 'room-search'
   | 'room-hot'
   | 'room-queue'
@@ -20,7 +21,8 @@ export type GuideFeatureId =
   | 'room-header'
   | 'room-player'
   | 'room-desktop-lyrics'
-  | 'room-report';
+  | 'room-report'
+  | 'room-vip';
 
 export type GuideScope = 'home' | 'room';
 
@@ -56,6 +58,7 @@ const ALL_FEATURE_IDS: GuideFeatureId[] = [
   'home-create',
   'home-join',
   'home-lobby',
+  'home-vip',
   'room-search',
   'room-hot',
   'room-queue',
@@ -64,6 +67,7 @@ const ALL_FEATURE_IDS: GuideFeatureId[] = [
   'room-player',
   'room-desktop-lyrics',
   'room-report',
+  'room-vip',
 ];
 
 /** 旧版细粒度 id → 合并后的步骤 */
@@ -117,6 +121,13 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: '大厅房间',
     body: '房间卡片：点卡片即可加入活跃房间',
     side: 'top',
+  },
+  {
+    id: 'home-vip',
+    scope: 'home',
+    title: 'VIP 样式设置',
+    body: '摸鱼岛永久贵宾：顶部出现「VIP 设置」按钮\n角标颜色 / 边框颜色 / 欢迎语 / 礼花 / 冷却：由你本人定制，回退后台默认',
+    side: 'bottom',
   },
   {
     id: 'room-search',
@@ -174,6 +185,13 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: '意见与错误上报',
     body: '上报错误：附带调试快照，方便排查问题\n提交意见：只交文字建议',
     side: 'top',
+  },
+  {
+    id: 'room-vip',
+    scope: 'room',
+    title: '入房礼花与 VIP 角标',
+    body: '全局贵宾进房：全员可见礼花动画（冷却可个人调整）\n角标名：来自摸鱼岛「currentTitleName」，为空时显示「【贵宾】」\nVIP 设置：在房间顶栏点击「VIP 设置」即可调整角标色 / 欢迎语 / 礼花 / 冷却',
+    side: 'bottom',
   },
 ];
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, ArrowRight, Lock, ListMusic,
-  Loader2, RefreshCw, Plus, X, Disc3, Sparkles, History, HeartHandshake, Heart,
+  Loader2, RefreshCw, Plus, X, Disc3, Sparkles, Github, History, HeartHandshake, Heart,
   Play, Activity, Search, ShieldCheck, Crown, Shuffle
 } from 'lucide-react';
 import { createRoom, checkRoom, listRooms, randomMatchRoom } from '../api/meting';
@@ -125,6 +125,14 @@ function lobbyCoverUrl(room: Pick<RoomSummary, 'customCoverUrl' | 'currentSong'>
     if (fromCustom) return fromCustom;
   }
   return lobbyDirectCoverUrl(room.currentSong?.pic);
+}
+
+function GiteeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 1024 1024" fill="currentColor" className={className} aria-hidden>
+      <path d="M512 1024q-104 0-199-40-92-39-163-110T40 711Q0 616 0 512t40-199Q79 221 150 150T313 40q95-40 199-40t199 40q92 39 163 110t110 163q40 95 40 199t-40 199q-39 92-110 163T711 984q-95 40-199 40z m259-569H480q-10 0-17.5 7.5T455 480v64q0 10 7.5 17.5T480 569h177q11 0 18.5 7.5T683 594v13q0 31-22.5 53.5T607 683H367q-11 0-18.5-7.5T341 657V417q0-31 22.5-53.5T417 341h354q11 0 18-7t7-18v-63q0-11-7-18t-18-7H417q-38 0-72.5 14T283 283q-27 27-41 61.5T228 417v354q0 11 7 18t18 7h373q46 0 85.5-22.5t62-62Q796 672 796 626V480q0-10-7-17.5t-18-7.5z" />
+    </svg>
+  );
 }
 
 const RoomCard = memo(function RoomCard({
@@ -393,6 +401,7 @@ export default function Home() {
   const nickname = useRoomStore((s) => s.nickname);
   const avatarUrl = useRoomStore((s) => s.avatar_url);
   const { leaveRoom } = useSocket();
+  const isPermanentVip = useSiteFeaturesStore((s) => s.vip.isPermanentVip);
 
   usePageSeo({ path: '/' });
   const siteSeo = useSiteSeoConfig();
@@ -721,6 +730,41 @@ export default function Home() {
                   <a href={adminEntryPath} className={`hidden sm:inline-flex ${headerIconCls}`} aria-label="管理后台">
                     <ShieldCheck className="home-header-icon__shield w-5 h-5" />
                   </a>
+                </Tooltip>
+              )}
+              <Tooltip content="Gitee 仓库">
+                <a
+                  href="https://gitee.com/w3126197382/openmusic"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`hidden sm:inline-flex ${headerIconCls}`}
+                  aria-label="Gitee"
+                >
+                  <GiteeIcon className="home-header-icon__gitee w-5 h-5" />
+                </a>
+              </Tooltip>
+              <Tooltip content="GitHub · 欢迎 Star">
+                <a
+                  href="https://github.com/qq01-hub/openmusic"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`hidden sm:inline-flex ${headerIconCls}`}
+                  aria-label="GitHub"
+                >
+                  <Github className="w-5 h-5" />
+                </a>
+              </Tooltip>
+              {isPermanentVip && (
+                <Tooltip content="VIP 样式设置">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/vip-settings')}
+                    data-guide="home-vip"
+                    className={`hidden sm:inline-flex ${headerIconCls}`}
+                    aria-label="VIP 设置"
+                  >
+                    <Crown className="w-5 h-5 text-amber-300" />
+                  </button>
                 </Tooltip>
               )}
             </div>

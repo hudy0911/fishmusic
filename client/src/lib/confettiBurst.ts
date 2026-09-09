@@ -22,12 +22,18 @@ function resolveConfettiHost(container?: HTMLElement | null): {
   return { host, width: vw, height: vh, fullscreen: true };
 }
 
-export function fireWelcomeConfetti(container?: HTMLElement | null, durationMs = 2800) {
+export function fireWelcomeConfetti(container?: HTMLElement | null | { source?: string }, durationMs = 2800) {
   if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     return;
   }
+  // 兼容新的可选参数对象：仅取容器（HTMLElement）部分
+  const hostContainer = container && (container as HTMLElement).nodeType === 1
+    ? (container as HTMLElement)
+    : (container && typeof container === 'object' && 'host' in (container as Record<string, unknown>)
+      ? ((container as { host?: HTMLElement | null }).host ?? null)
+      : null);
 
-  const resolved = resolveConfettiHost(container);
+  const resolved = resolveConfettiHost(hostContainer);
   if (!resolved) return;
 
   const { host, width, height, fullscreen } = resolved;

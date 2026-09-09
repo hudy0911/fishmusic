@@ -39,7 +39,23 @@ export async function fetchYucoderProfile(accessToken) {
   const id = String(data?.id ?? data?.sub ?? '').trim();
   if (!id) throw new Error('摸鱼岛用户信息缺少 id');
   // OpenMusic 的 nickname 对应摸鱼岛展示昵称 name；缺失时回退到账户名 username。
-  return { id, username: String(data?.name ?? data?.username ?? '').trim(), avatarUrl: String(data?.avatar ?? data?.avatar_url ?? '').trim() };
+  // VIP 字段：isPermanentVip / currentTitleName / donationAmount，与 OAuth2UserInfoVO 保持一致。
+  const donationAmountRaw = data?.donationAmount;
+  let donationAmount = null;
+  if (typeof donationAmountRaw === 'number' && Number.isFinite(donationAmountRaw)) {
+    donationAmount = String(donationAmountRaw);
+  } else if (typeof donationAmountRaw === 'string') {
+    const trimmed = donationAmountRaw.trim();
+    if (trimmed) donationAmount = trimmed;
+  }
+  return {
+    id,
+    username: String(data?.name ?? data?.username ?? '').trim(),
+    avatarUrl: String(data?.avatar ?? data?.avatar_url ?? '').trim(),
+    isPermanentVip: Boolean(data?.isPermanentVip),
+    currentTitleName: String(data?.currentTitleName || '').trim(),
+    donationAmount,
+  };
 }
 
 const provider = createOAuthProvider({ idField: 'yucoderId', bindPrefix: BIND_PREFIX, profilePrefix: PROFILE_PREFIX, buildAuthorizeUrl: buildYucoderAuthorizeUrl, exchangeCode: exchangeYucoderCode, fetchProfile: fetchYucoderProfile });

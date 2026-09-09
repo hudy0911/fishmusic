@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   BugOutlined,
+  CrownOutlined,
   DashboardOutlined,
   FileTextOutlined,
   HeartOutlined,
@@ -34,6 +35,7 @@ export const AUDIT_ACTION_OPTIONS: { value: string; label: string }[] = [
 export const ADMIN_TABS: { id: AdminTabId; label: string; icon: ReactNode }[] = [
   { id: 'overview', label: '概览', icon: <DashboardOutlined /> },
   { id: 'rooms', label: '房间管理', icon: <SoundOutlined /> },
+  { id: 'vip', label: '贵宾管理', icon: <CrownOutlined /> },
   { id: 'bans', label: '全站封禁', icon: <StopOutlined /> },
   { id: 'reports', label: '错误上报', icon: <BugOutlined /> },
   { id: 'notify', label: '公告广播', icon: <NotificationOutlined /> },
@@ -45,6 +47,7 @@ export const ADMIN_TABS: { id: AdminTabId; label: string; icon: ReactNode }[] = 
 export const TAB_META: Record<AdminTabId, { title: string; description: string }> = {
   overview: { title: '概览', description: '' },
   rooms: { title: '房间管理', description: '' },
+  vip: { title: '贵宾管理', description: '基于摸鱼岛 OAuth 的全局贵宾；颜色 / 欢迎语由用户本人在「VIP 设置」中自定义。' },
   bans: { title: '全站封禁', description: '' },
   reports: { title: '错误上报', description: '' },
   notify: { title: '公告广播', description: '' },
