@@ -437,7 +437,6 @@ export default function RoomSettingsModal({
       items.push({ id: 'room', label: '房主' });
     }
     if (canModerate) {
-      items.push({ id: 'member', label: '贵宾' });
       items.push({ id: 'announcement', label: '公告' });
       items.push({ id: 'chat', label: '聊天' });
       items.push({ id: 'songRequest', label: '点歌' });
@@ -476,7 +475,7 @@ export default function RoomSettingsModal({
       initialTabs.push('fm', ...(MUSIC_ACCOUNT_TAB_ENABLED && hasMusicAccountPlatform ? (['account'] as SettingsTab[]) : []), 'room');
     }
     if (canModerate) {
-      initialTabs.push('member', 'announcement', 'chat', 'songRequest');
+      initialTabs.push('announcement', 'chat', 'songRequest');
     }
     if (!isOwner && (identityWechatUinEnabled || identityLinuxdoEnabled || identityGithubEnabled)) {
       initialTabs.push('room');

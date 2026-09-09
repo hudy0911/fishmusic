@@ -547,7 +547,7 @@ export default function Room() {
     linuxdoBound: null,
     githubBound: null,
   });
-  const identityRecoveryAvailable = identityProviders.wechatUinEnabled || identityProviders.linuxdoEnabled || identityProviders.githubEnabled;
+
   useEffect(() => {
     let cancelled = false;
     void Promise.all([fetchWechatUinStatus(roomId), fetchLinuxdoStatus(roomId), fetchGithubStatus(roomId)]).then(([wechat, linuxdo, github]) => {
@@ -3045,19 +3045,6 @@ export default function Room() {
                       aria-label="房间设置"
                     >
                       <SlidersHorizontal className="w-3.5 h-3.5" />
-                    </button>
-                  </Tooltip>
-                )}
-
-                {!canOpenRoomSettings && identityRecoveryAvailable && (
-                  <Tooltip side="bottom" content="找回房间身份">
-                    <button
-                      type="button"
-                      onClick={() => setSettingsOpen(true)}
-                      className="flex-shrink-0 rounded-lg p-1 text-netease-muted transition-colors hover:bg-white/10 hover:text-white"
-                      aria-label="找回房间身份"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
                     </button>
                   </Tooltip>
                 )}
