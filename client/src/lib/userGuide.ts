@@ -13,6 +13,7 @@ export type GuideFeatureId =
   | 'home-create'
   | 'home-join'
   | 'home-lobby'
+  | 'home-vip'
   | 'room-search'
   | 'room-hot'
   | 'room-queue'
@@ -20,7 +21,8 @@ export type GuideFeatureId =
   | 'room-header'
   | 'room-player'
   | 'room-desktop-lyrics'
-  | 'room-report';
+  | 'room-report'
+  | 'room-vip';
 
 export type GuideScope = 'home' | 'room';
 
@@ -56,6 +58,7 @@ const ALL_FEATURE_IDS: GuideFeatureId[] = [
   'home-create',
   'home-join',
   'home-lobby',
+  'home-vip',
   'room-search',
   'room-hot',
   'room-queue',
@@ -64,6 +67,7 @@ const ALL_FEATURE_IDS: GuideFeatureId[] = [
   'room-player',
   'room-desktop-lyrics',
   'room-report',
+  'room-vip',
 ];
 
 /** 旧版细粒度 id → 合并后的步骤 */
@@ -119,6 +123,13 @@ export const GUIDE_STEPS: GuideStep[] = [
     side: 'top',
   },
   {
+    id: 'home-vip',
+    scope: 'home',
+    title: 'VIP 样式设置',
+    body: '摸鱼岛永久贵宾：顶部出现「VIP 设置」按钮\n角标颜色 / 边框颜色 / 欢迎语 / 礼花 / 冷却：由你本人定制，回退后台默认',
+    side: 'bottom',
+  },
+  {
     id: 'room-search',
     scope: 'room',
     title: '点歌入口',
@@ -150,7 +161,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: 'room-header',
     scope: 'room',
     title: '顶栏功能',
-    body: '音质：改本机听到的音质\n在线用户：查看成员，改昵称/头像\n主题色：换房间氛围色\n太阳/月亮：切换浅色或深色外观，本机会自动记住\n纯净模式：隐藏动效，标签页伪装\n沉浸模式：全屏视觉体验\n分享：打开二维码与邀请文案，一键复制\n房主/管理：踢人、进房间设置\n仅房主：在「漫游」设置私人漫游或多个指定歌单，歌单可跨平台；指定后队列为空时仅从合并曲库循环取歌，可搜索或粘贴链接，并可选择是否按歌名去重\n仅房主：任命/取消管理员、允许管理员自助设置自己的贵宾标识\n身份绑定：房主可绑定微信 UIN，换设备后可扫码找回房主身份',
+    body: '音质：改本机听到的音质\n在线用户：查看成员，改昵称/头像\n主题色：换房间氛围色\n纯净模式：隐藏动效，标签页伪装\n沉浸模式：全屏视觉体验\n分享：打开二维码与邀请文案，一键复制\n房主/管理：踢人、进房间设置\n仅房主：在「漫游」设置私人漫游或多个指定歌单，歌单可跨平台；指定后队列为空时仅从合并曲库循环取歌，可搜索或粘贴链接，并可选择是否按歌名去重\n仅房主：任命/取消管理员、允许管理员自助设置自己的贵宾标识\n身份绑定：当前房主可绑定微信 UIN，换设备后可扫码恢复自己的房主身份；房主转让后，原绑定不再具备找回权限',
     side: 'bottom',
   },
   {
@@ -174,6 +185,13 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: '意见与错误上报',
     body: '上报错误：附带调试快照，方便排查问题\n提交意见：只交文字建议',
     side: 'top',
+  },
+  {
+    id: 'room-vip',
+    scope: 'room',
+    title: '入房礼花与 VIP 角标',
+    body: '全局贵宾进房：全员可见礼花动画（冷却可个人调整）\n角标名：来自摸鱼岛「currentTitleName」，为空时显示「【贵宾】」\nVIP 设置：在房间顶栏点击「VIP 设置」即可调整角标色 / 欢迎语 / 礼花 / 冷却',
+    side: 'bottom',
   },
 ];
 

@@ -51,6 +51,8 @@ import {
 } from './errorReports.js';
 import { sanitizeDeviceId } from './deviceIdentity.js';
 import { getRuntimeConfigForAdmin, setRuntimeConfig, getRuntimeConfig } from './runtimeConfig.js';
+import { normalizeVipGlobalDefaults, getVipGlobalDefaults } from './runtimeConfig.js';
+import { listVipProfiles, getVipProfile, saveVipProfile, clearVipProfile } from './vipProfile.js';
 import { testAiModelChat, testAiModelVision, getAiModelConfig, isAiModelConfigured } from './aiModelService.js';
 import { patchClientIndexHtml } from './seoIndexHtml.js';
 import path from 'path';
@@ -1031,6 +1033,51 @@ export function mountAdminApi(app, {
     }
     audit('set_runtime_config', {}, ip);
     res.json({ ok: true, config: result.config });
+  });
+
+  // ---------- VIP 管理：全局默认 + 用户列表 ----------
+  app.get('/api/admin/vip/config', requireAdmin, (_req, res) => {
+    res.json({ config: getRuntimeConfig().vipGlobalDefaults });
+  });
+
+  app.put('/api/admin/vip/config', requireAdminOrigin, requireAdmin, requireAdminSetupComplete, (req, res) => {
+    const ip = getClientIp?.(req) || req.ip || '';
+    const normalized = normalizeVipGlobalDefaults(req.body || {});
+    const result = setRuntimeConfig({ vipGlobalDefaults: normalized });
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    audit('vip_config_update', {
+      welcomeEnabled: normalized.welcomeEnabled,
+      welcomeTemplateId: normalized.welcomeTemplateId,
+      cooldownSec: normalized.welcomeCooldownSec,
+    }, ip);
+    res.json({ ok: true, config: normalized });
+  });
+
+  app.get('/api/admin/vip/users', requireAdmin, async (req, res) => {
+    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query.pageSize || '20'), 10) || 20));
+    const q = String(req.query.q || '').trim().slice(0, 64);
+    const result = await listVipProfiles({ offset: (page - 1) * pageSize, limit: pageSize, q });
+    res.json({
+      items: result.items,
+      total: result.total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(result.total / pageSize) || 1),
+    });
+  });
+
+  app.post('/api/admin/vip/users/:userId/refresh', requireAdminOrigin, requireAdmin, requireAdminSetupComplete, async (req, res) => {
+    const userId = String(req.params.userId || '').trim();
+    if (!userId) return res.status(400).json({ error: 'userId 不能为空' });
+    const ip = getClientIp?.(req) || req.ip || '';
+    // 服务端不持有摸鱼岛 access_token；刷新 = 清除当前缓存的 VIP 概要，
+    // 下次该用户重新登录摸鱼岛 OAuth 时会重新拉取并写回。
+    await clearVipProfile(userId);
+    audit('vip_refresh', { userId }, ip);
+    res.json({ success: true, userId });
   });
 
   app.get('/api/admin/announcement', requireAdmin, (_req, res) => {

@@ -54,6 +54,7 @@ import InitialSetupGate from './admin/InitialSetupGate';
 import LoginForm from './admin/LoginForm';
 import OverviewDashboard from './admin/OverviewDashboard';
 import RuntimeConfigPanel from './admin/RuntimeConfigPanel';
+import VipPanel from './admin/VipPanel';
 import SettingsSection from './admin/SettingsSection';
 import type {
   AdminAuditEntry,
@@ -1414,6 +1415,9 @@ function AdminPage() {
             onGoReports={() => setActiveTab('reports')}
           />
         );
+
+      case 'vip':
+        return <VipPanel />;
 
       case 'rooms':
         return (

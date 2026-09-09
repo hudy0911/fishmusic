@@ -8,7 +8,6 @@ import {
   buildWelcomeText,
   normalizeIncomingMemberTier,
   normalizeMemberSettings,
-  resolveMemberWelcomeSettings,
   restoreMemberTiersFromStorage,
   serializeMemberSettings,
   serializeMemberTier,
@@ -18,6 +17,9 @@ import { deleteRoomChatImages, validateChatImageForRoom, validateExternalChatIma
 import { isLocalStickerImageKey, validateLocalStickerImage } from "./localSticker.js";
 import { collectDeviceIdsForUser, isAccessBanned } from "./deviceIdentity.js";
 import { getRuntimeConfig, ensureRoomCredentialEncryptionKey } from "./runtimeConfig.js";
+import { getVipProfile, resolveEffectiveVipTitle } from './vipProfile.js';
+import { getVipPersonalSettings } from './vipSettings.js';
+import { resolveVipWelcomeForUser, resolveVipTierForUser, buildWelcomeText as buildVipWelcomeText } from './vipWelcome.js';
 import { resizeCoverForThumb } from "./coverUrl.js";
 import { isDirectCoverUrl, resolveSongCoverUrl } from "./resolveSongCover.js";
 import { isSongPlayableOnServer } from "./songPlayableProbe.js";
@@ -242,6 +244,12 @@ export function normalizePlayMode(value) {
 let onRoomPrefetchReady = null;
 /** @type {((roomId: string) => void) | null} */
 let onRoomStructureChanged = null;
+/** 全局 io 实例：仅用于 vip 入房礼花广播；未设置时降级为不广播。 */
+let broadcastIo = null;
+
+export function setBroadcastIo(ioInstance) {
+  broadcastIo = ioInstance || null;
+}
 
 export function setOnRoomPrefetchReady(handler) {
   onRoomPrefetchReady = handler;
@@ -2699,7 +2707,7 @@ function countActiveUsersByDevice(room, deviceId, excludeUserId = null) {
   return count;
 }
 
-export function addUser(roomId, userId, nickname, options = {}) {
+export async function addUser(roomId, userId, nickname, options = {}) {
   const room = rooms.get(roomId);
   if (!room) return null;
 
@@ -2768,6 +2776,32 @@ export function addUser(roomId, userId, nickname, options = {}) {
   }
   if (room.isPlaying && room.current && !room.startedAt) {
     room.startedAt = Date.now() - ((room.currentTime || 0) / normalizePlaybackRate(room.playbackRate)) * 1000;
+  }
+
+  // 全局 VIP：把摸鱼岛 VIP 颜色同步进房间 memberTiers，让队列 / 成员列表 / 聊天气泡
+  // 自动显示 VIP 标识和边框。仅在房间还没有该用户 tier 时写入，避免覆盖房主手动配置的样式。
+  if (!room.memberTiers?.has(userId)) {
+    try {
+      const [profile, personal, defaults] = await Promise.all([
+        getVipProfile(userId),
+        getVipPersonalSettings(userId),
+        Promise.resolve(getRuntimeConfig().vipGlobalDefaults),
+      ]);
+      const vipTier = resolveVipTierForUser({ profile, personal, defaults });
+      if (vipTier) {
+        if (!room.memberTiers) room.memberTiers = new Map();
+        room.memberTiers.set(userId, {
+          badgeLabel: vipTier.badgeLabel,
+          badgeColor: vipTier.badgeColor,
+          borderStyleId: vipTier.borderStyleId,
+          borderColor: vipTier.borderColor,
+          assignedAt: Date.now(),
+          source: 'global-vip',
+        });
+      }
+    } catch (err) {
+      console.error('同步全局 VIP 标识到房间失败:', err?.message || err);
+    }
   }
 
   persistRoom(room);
@@ -3339,38 +3373,52 @@ function hasRecentMemberWelcome(room, userId, cooldownMs = MEMBER_WELCOME_COOLDO
   return false;
 }
 
-export function postMemberWelcomeMessage(roomId, userId) {
+/**
+ * 进房迎宾：仅对 VIP（摸鱼岛概要标记的永久会员）生效。
+ * 开关 / 文案 / 颜色 / 冷却时间一律来自后台全局默认；个人仅可定制颜色和文案（不能改冷却）。
+ */
+export async function postMemberWelcomeMessage(roomId, userId) {
   const room = rooms.get(roomId);
   if (!room || !userId) return null;
 
-  const tier = room.memberTiers?.get(userId);
-  if (!tier) return null;
+  // 1) 仅 VIP 才触发：摸鱼岛 OAuth 概要 + 个人设置
+  const [profile, personal, defaults] = await Promise.all([
+    getVipProfile(userId),
+    getVipPersonalSettings(userId),
+    Promise.resolve(getRuntimeConfig().vipGlobalDefaults),
+  ]);
+  const vipResolved = resolveVipWelcomeForUser({ profile, personal, defaults });
+  if (!vipResolved) return null;
 
-  const settings = resolveMemberWelcomeSettings(tier, room.memberSettings);
-  const welcomeOn = Boolean(settings.welcomeEnabled);
-  const confettiOn = Boolean(settings.confettiEnabled);
+  const welcomeOn = Boolean(vipResolved.welcomeEnabled);
+  const confettiOn = Boolean(vipResolved.confettiEnabled);
   if (!welcomeOn && !confettiOn) return null;
 
-  const cooldownMs = Math.max(0, Number(settings.welcomeCooldownSec) || 0) * 1000;
+  const cooldownMs = Math.max(0, Number(defaults.welcomeCooldownSec) || 0) * 1000;
   if (hasRecentMemberWelcome(room, userId, cooldownMs)) return null;
 
   const user = room.users.get(userId);
-  const nickname = user?.nickname || room.userNicknames?.get(userId) || "贵宾";
-  const text = welcomeOn ? buildWelcomeText(settings, tier, nickname) : "";
+  const nickname = user?.nickname || room.userNicknames?.get(userId) || '贵宾';
+  const text = welcomeOn ? buildVipWelcomeText({
+    welcomeTemplateId: vipResolved.welcomeTemplateId,
+    welcomeCustomText: vipResolved.welcomeCustomText,
+  }, vipResolved.effectiveTitle, nickname) : '';
+
+  const timestamp = Date.now();
   const message = {
     id: generateId(),
-    userId: "system",
-    nickname: "房间迎宾",
+    userId: 'system',
+    nickname: '房间迎宾',
     text,
-    kind: "welcome",
+    kind: 'welcome',
     mentions: [],
     replyTo: null,
-    timestamp: Date.now(),
+    timestamp,
     memberTier: {
-      badgeLabel: tier.badgeLabel,
-      badgeColor: tier.badgeColor,
-      borderStyleId: tier.borderStyleId,
-      borderColor: tier.borderColor,
+      badgeLabel: vipResolved.effectiveTitle,
+      badgeColor: vipResolved.badgeColor,
+      borderStyleId: 'solid',
+      borderColor: vipResolved.borderColor,
     },
     targetUserId: userId,
     targetNickname: nickname,
@@ -3382,7 +3430,27 @@ export function postMemberWelcomeMessage(roomId, userId) {
     room.messages.splice(0, room.messages.length - MAX_CHAT_MESSAGES);
   }
   persistRoom(room);
-  return serializeChatMessage(message);
+  const serialized = serializeChatMessage(message);
+
+  // 触发全员礼花广播；前端可独立于聊天消息播放礼花
+  try {
+    if (broadcastIo && typeof broadcastIo.to === 'function') {
+      broadcastIo.to(roomId).emit('room_vip_entrance', {
+        userId,
+        nickname,
+        effectiveTitle: vipResolved.effectiveTitle,
+        badgeColor: vipResolved.badgeColor,
+        borderColor: vipResolved.borderColor,
+        confettiEnabled: confettiOn,
+        timestamp,
+        messageId: message.id,
+      });
+    }
+  } catch (err) {
+    console.error('room_vip_entrance 广播失败:', err?.message || err);
+  }
+
+  return serialized;
 }
 
 function formatSongTitle(song) {
@@ -4010,7 +4078,13 @@ export function adminTransferOwner(roomId, targetUserId) {
   };
 }
 
-/** 微信身份找回房主：将已绑定身份提升为房主，原房主退为正式管理员。 */
+/**
+ * 外部身份找回房主。
+ *
+ * 第三方账号绑定的是创建者的内部 userId，而不是一张可永久夺回房间的凭证。
+ * 因此房主已经通过前台或后台转让给其他人后，旧 creatorId 即使仍命中残留的
+ * 绑定记录也必须被拒绝，不能覆盖已完成的转让。
+ */
 export function recoverRoomOwner(roomId, recoveredUserId, recoveryDeviceId = null) {
   const room = rooms.get(String(roomId || '').toUpperCase());
   if (!room) return { error: '房间不存在' };
@@ -4018,6 +4092,7 @@ export function recoverRoomOwner(roomId, recoveredUserId, recoveryDeviceId = nul
   const targetId = sanitizeCreatorId(recoveredUserId) || String(recoveredUserId || '').trim();
   if (!/^[a-zA-Z0-9_-]{8,64}$/.test(targetId)) return { error: '无效用户' };
   if (targetId === room.creatorId) return { ok: true, room: serializeRoom(room), changed: false };
+  if (room.creatorId) return { error: '该身份已不再是当前房主' };
   if (!wasKnownRoomUser(room, targetId) && !room.users.has(targetId)) {
     return { error: '该身份不是当前房间成员' };
   }

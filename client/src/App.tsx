@@ -15,6 +15,7 @@ const Room = lazyWithRetry(() => import('./pages/Room'), 'Room');
 const TvDisplay = lazyWithRetry(() => import('./pages/TvDisplay'), 'TvDisplay');
 const Admin = lazyWithRetry(() => import('./pages/Admin'), 'Admin');
 const Setup = lazyWithRetry(() => import('./pages/Setup'), 'Setup');
+const VipSettings = lazyWithRetry(() => import('./pages/VipSettings'), 'VipSettings');
 
 function RouteFallback() {
   const loadingQuote = useLoadingQuote();
@@ -168,6 +169,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/room/:roomId" element={<Room />} />
               <Route path="/tv/:roomId" element={<TvDisplay />} />
+              <Route path="/vip-settings" element={<VipSettings />} />
               <Route path="*" element={<AdminGate />} />
             </Routes>
           )}

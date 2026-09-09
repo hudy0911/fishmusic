@@ -2163,8 +2163,17 @@ app.get(['/api/auth/linuxdo/callback', '/api/auth/moyu/callback'], async (req, r
     if (!identity?.userId || identity.userId !== state.userId) {
       return fail(returnPath, 'expired');
     }
+    const room = getRoomInternal(state.roomId);
+    if (!room || room.creatorId !== identity.userId) {
+      return fail(returnPath, 'denied');
+    }
     try {
       await bindLinuxdoToUser(profile.id, identity.userId, profile, state.roomId);
+      // 授权跳转期间后台或现房主可能刚完成转让，避免把已清理的旧绑定重新写回。
+      if (getRoomInternal(state.roomId)?.creatorId !== identity.userId) {
+        await unbindLinuxdoForUser(identity.userId, state.roomId);
+        return fail(returnPath, 'denied');
+      }
     } catch (err) {
       console.error('摸鱼岛绑定写入失败:', err?.message || err);
       return fail(returnPath, 'error');
@@ -2284,8 +2293,17 @@ app.get('/api/auth/github/callback', async (req, res) => {
     if (!identity?.userId || identity.userId !== state.userId) {
       return fail(returnPath, 'expired');
     }
+    const room = getRoomInternal(state.roomId);
+    if (!room || room.creatorId !== identity.userId) {
+      return fail(returnPath, 'denied');
+    }
     try {
       await bindGithubToUser(profile.id, identity.userId, profile, state.roomId);
+      // 授权跳转期间后台或现房主可能刚完成转让，避免把已清理的旧绑定重新写回。
+      if (getRoomInternal(state.roomId)?.creatorId !== identity.userId) {
+        await unbindGithubForUser(identity.userId, state.roomId);
+        return fail(returnPath, 'denied');
+      }
     } catch (err) {
       console.error('GitHub 绑定写入失败:', err?.message || err);
       return fail(returnPath, 'error');

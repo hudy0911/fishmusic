@@ -374,6 +374,7 @@ function normalize(config) {
     aiMaxRequestsPerMinute: normalizeAiRateLimit(config.aiMaxRequestsPerMinute, 1000, 1, 10_000),
     aiMaxTokensPerMinute: normalizeAiRateLimit(config.aiMaxTokensPerMinute, 50_000, 1_000, 2_000_000),
     aiModelPools,
+    vipGlobalDefaults: normalizeVipGlobalDefaults(config.vipGlobalDefaults),
   };
 }
 
@@ -435,6 +436,49 @@ function normalizeAiApiProtocol(value) {
   return String(value || '').trim().toLowerCase() === 'responses'
     ? 'responses'
     : 'chat_completions';
+}
+
+const VIP_DEFAULT_BADGE_COLOR = '#f6d365';
+const VIP_DEFAULT_BORDER_COLOR = '#f6d365';
+const VIP_DEFAULT_TEMPLATE = 'royal';
+const VIP_DEFAULT_COOLDOWN_SEC = 300;
+const VIP_MAX_COOLDOWN_SEC = 24 * 60 * 60;
+const VIP_TEMPLATE_IDS = new Set(['none', 'royal', 'sparkle', 'vip-lounge', 'spotlight', 'wave', 'custom']);
+
+function normalizeVipColor(value, fallback) {
+  const raw = String(value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw;
+  return fallback;
+}
+
+function normalizeVipTemplate(value, fallback) {
+  const raw = String(value || '').trim();
+  if (VIP_TEMPLATE_IDS.has(raw)) return raw;
+  return fallback;
+}
+
+function normalizeVipCooldown(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const num = Math.floor(Number(value));
+  if (!Number.isFinite(num) || num < 0) return fallback;
+  return Math.min(num, VIP_MAX_COOLDOWN_SEC);
+}
+
+export function normalizeVipGlobalDefaults(input) {
+  const src = (input && typeof input === 'object') ? input : {};
+  return {
+    badgeColor: normalizeVipColor(src.badgeColor, VIP_DEFAULT_BADGE_COLOR),
+    borderColor: normalizeVipColor(src.borderColor, VIP_DEFAULT_BORDER_COLOR),
+    welcomeEnabled: src.welcomeEnabled !== false,
+    welcomeTemplateId: normalizeVipTemplate(src.welcomeTemplateId, VIP_DEFAULT_TEMPLATE),
+    welcomeCustomText: String(src.welcomeCustomText || '').trim().slice(0, 200),
+    confettiEnabled: src.confettiEnabled !== false,
+    welcomeCooldownSec: normalizeVipCooldown(src.welcomeCooldownSec, VIP_DEFAULT_COOLDOWN_SEC),
+  };
+}
+
+export function getVipGlobalDefaults() {
+  return getRuntimeConfig().vipGlobalDefaults;
 }
 
 export function getRuntimeConfig() {
