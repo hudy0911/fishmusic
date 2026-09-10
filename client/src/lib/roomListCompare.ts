@@ -27,13 +27,18 @@ export function lobbyRoomTypeRank(
   return locked * 2 + paused;
 }
 
-/** 大厅排序：先按类型（开放播放 → … → 上锁暂停），同类型再按人数 */
-export function sortLobbyRooms<T extends Pick<RoomSummary, 'userCount' | 'isLocked' | 'hasPassword' | 'isPlaying' | 'createdAt'>>(
+/** 大厅排序：置顶优先，再按类型（开放播放 → … → 上锁暂停），同类型再按人数 */
+export function sortLobbyRooms<T extends Pick<RoomSummary, 'userCount' | 'isLocked' | 'hasPassword' | 'isPlaying' | 'createdAt' | 'pinnedAt'>>(
   rooms: T[],
 ): T[] {
   return [...rooms].sort((a, b) => {
+    // 1. 置顶优先
+    const pinnedDiff = (b.pinnedAt || 0) - (a.pinnedAt || 0);
+    if (pinnedDiff !== 0) return pinnedDiff;
+    // 2. 房间类型
     const typeDiff = lobbyRoomTypeRank(a) - lobbyRoomTypeRank(b);
     if (typeDiff !== 0) return typeDiff;
+    // 3. 人数 & 创建时间
     return b.userCount - a.userCount || b.createdAt - a.createdAt;
   });
 }
@@ -55,6 +60,7 @@ function roomSummarySignature(room: RoomSummary): string {
     song?.pic ?? '',
     room.queueLength,
     room.createdAt,
+    room.pinnedAt ?? 0,
   ].join('\0');
 }
 

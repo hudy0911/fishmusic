@@ -318,6 +318,8 @@ export interface AdminRoom {
   lastJoinedAt?: number | null;
   ownerLastJoinedAt?: number | null;
   protectedFromDestroy: boolean;
+  /** 管理后台置顶时间戳（毫秒）；未置顶为 0 */
+  pinnedAt?: number;
   ownerNickname?: string;
   creatorId?: string | null;
   creatorDeviceId?: string | null;

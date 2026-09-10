@@ -56,6 +56,10 @@ const generateId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 12);
 const PROTECTED_ROOMS_REDIS_KEY = "openmusic:admin:protected_rooms";
 /** 管理后台设置的保活房间；Redis 可用时跨重启持久化 */
 const protectedRoomIds = new Set();
+/** 管理后台设置的置顶房间：key=房间号，value=置顶时间戳（毫秒），用于按置顶时间倒序 */
+const PINNED_ROOMS_REDIS_KEY = "openmusic:admin:pinned_rooms";
+/** key=房间号，value=置顶时间戳（毫秒）。Set 端用于快速判存在，Map 用于按时间排序 */
+const pinnedRoomIds = new Map();
 const DEFAULT_QUEUE_MAX_LENGTH = 200;
 export const MIN_PLAYBACK_RATE = 0.1;
 export const MAX_PLAYBACK_RATE = 3;
@@ -654,6 +658,14 @@ function destroyRoomNow(roomId) {
   clearAllPendingLeaveClears(room);
   clearSkipRequestExpiryTimersForRoom(id);
   rooms.delete(id);
+  if (pinnedRoomIds.delete(id) > 0) {
+    const redis = getRedisClient();
+    if (redis) {
+      void redis.hDel(PINNED_ROOMS_REDIS_KEY, id).catch((err) => {
+        console.error(`Redis: 清理房间 ${id} 置顶标记失败:`, err?.message || err);
+      });
+    }
+  }
   invalidateRoomsListCache();
   void deleteRoomChatImages(id).catch((err) => {
     console.error(`删除房间 ${id} 聊天图片失败:`, err?.message || err);
@@ -970,6 +982,16 @@ export async function initRooms() {
       for (const id of ids) protectedRoomIds.add(String(id).toUpperCase());
     } catch (err) {
       console.error("Redis: 读取保活房间列表失败:", err.message);
+    }
+    try {
+      // 置顶列表用 Redis Hash 持久化，score 字段记置顶时间戳，便于按时间倒序
+      const raw = await redis.hGetAll(PINNED_ROOMS_REDIS_KEY);
+      for (const [id, score] of Object.entries(raw || {})) {
+        const ts = Number(score);
+        if (Number.isFinite(ts) && ts > 0) pinnedRoomIds.set(String(id).toUpperCase(), ts);
+      }
+    } catch (err) {
+      console.error("Redis: 读取置顶房间列表失败:", err.message);
     }
   }
   const stored = await loadAllRoomsFromStorage();
@@ -2350,6 +2372,7 @@ export function listRoomsForAdmin() {
         createdAt: room.createdAt,
         lastJoinedAt,
         protectedFromDestroy: protectedRoomIds.has(room.id),
+        pinnedAt: pinnedRoomIds.get(room.id) || 0,
         permanentApplication: null,
         creatorId: room.creatorId || null,
         creatorDeviceId: room.creatorDeviceId || null,
@@ -2522,6 +2545,61 @@ export async function setRoomProtectedFromDestroy(roomId, enabled) {
   return { success: true, roomId: id, protectedFromDestroy: next };
 }
 
+/**
+ * 管理后台：置顶/取消置顶房间。
+ * 置顶状态跨进程重启由 Redis Hash 持久化；房间销毁时由 destroyRoomNow 自动清理。
+ * 不影响房间本身的生命周期（不会触发保活）。
+ */
+export async function setRoomPinned(roomId, enabled) {
+  const id = String(roomId || "")
+    .trim()
+    .toUpperCase();
+  if (!id) return { success: false, error: "房间号无效" };
+  const room = rooms.get(id);
+  if (!room) return { success: false, error: "房间不存在" };
+
+  const next = Boolean(enabled);
+  const redis = getRedisClient();
+  const previouslyPinned = pinnedRoomIds.has(id);
+  if (next && !previouslyPinned) {
+    const ts = Date.now();
+    pinnedRoomIds.set(id, ts);
+    if (redis) {
+      try {
+        await redis.hSet(PINNED_ROOMS_REDIS_KEY, id, String(ts));
+      } catch (err) {
+        pinnedRoomIds.delete(id);
+        console.error(`Redis: 设置房间 ${id} 置顶失败:`, err?.message || err);
+        return { success: false, error: "Redis 保存失败，请稍后重试" };
+      }
+    }
+    invalidateRoomsListCache();
+    return { success: true, roomId: id, pinned: true, pinnedAt: ts };
+  }
+  if (!next && previouslyPinned) {
+    pinnedRoomIds.delete(id);
+    if (redis) {
+      try {
+        await redis.hDel(PINNED_ROOMS_REDIS_KEY, id);
+      } catch (err) {
+        // 回滚内存标记，避免 Redis 与内存不一致
+        pinnedRoomIds.set(id, Date.now());
+        console.error(`Redis: 取消房间 ${id} 置顶失败:`, err?.message || err);
+        return { success: false, error: "Redis 保存失败，请稍后重试" };
+      }
+    }
+    invalidateRoomsListCache();
+    return { success: true, roomId: id, pinned: false, pinnedAt: 0 };
+  }
+  // 状态未变化：保持现有 pinnedAt，不写 Redis
+  return {
+    success: true,
+    roomId: id,
+    pinned: previouslyPinned,
+    pinnedAt: previouslyPinned ? pinnedRoomIds.get(id) || 0 : 0,
+  };
+}
+
   // 管理后台：立即解散房间（调用方负责先踢出房内 socket）
 export function adminDestroyRoom(roomId) {
   const id = roomId?.toUpperCase();
@@ -2532,6 +2610,12 @@ export function adminDestroyRoom(roomId) {
   clearAllPendingLeaveClears(room);
   clearSkipRequestExpiryTimersForRoom(id);
   protectedRoomIds.delete(id);
+  if (pinnedRoomIds.delete(id) > 0) {
+    const redis = getRedisClient();
+    if (redis) {
+      void redis.hDel(PINNED_ROOMS_REDIS_KEY, id).catch((err) => console.error(`Redis: 清理房间 ${id} 置顶标记失败:`, err.message));
+    }
+  }
   const redis = getRedisClient();
   if (redis) {
     void redis.sRem(PROTECTED_ROOMS_REDIS_KEY, id).catch((err) => console.error(`Redis: 清理房间 ${id} 保活状态失败:`, err.message));
@@ -6020,6 +6104,8 @@ function serializeRoomSummary(room) {
     createdAt: room.createdAt,
     ownerId: room.creatorId || null,
     adminIds: Array.from(room.adminIds || []),
+    /** 大厅置顶时间戳（毫秒）；未置顶为 0，前端据此把房间排到所在分组的首位 */
+    pinnedAt: pinnedRoomIds.get(room.id) || 0,
   };
 }
 

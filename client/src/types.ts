@@ -412,6 +412,8 @@ export interface RoomSummary {
   } | null;
   queueLength: number;
   createdAt: number;
+  /** 管理后台置顶时间戳（毫秒）；未置顶为 0，前端据此把房间排到所在分组的首位 */
+  pinnedAt?: number;
 }
 
 export interface RoomCheckResult {
