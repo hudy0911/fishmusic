@@ -129,7 +129,7 @@ export default function VipSettingsPage() {
   const welcomeCustomText = draft.welcomeCustomText || defaults.welcomeCustomText;
   const confettiEnabled = draft.confettiEnabled === null ? defaults.confettiEnabled : draft.confettiEnabled;
 
-  const previewBadge = vip.effectiveTitle || '【贵宾】';
+  const previewBadge = vip.effectiveTitle || '贵宾';
   const previewText = welcomeEnabled ? buildWelcomeText(welcomeTemplateId, welcomeCustomText, previewBadge, nickname || '贵宾') : '';
   const badgeStyle = getMemberBadgeStyle(badgeColor);
   const frameStyle = getMemberFrameStyle(borderColor);
@@ -196,7 +196,7 @@ export default function VipSettingsPage() {
           <div>
             <h1 className="text-2xl font-bold">VIP 样式设置</h1>
             <p className="text-sm text-white/50 mt-1">
-              角标名由摸鱼岛「{vip.currentTitleName || '未填写'}」决定（缺失时显示「【贵宾】」），颜色与欢迎语由你本人定制。
+              角标名由摸鱼岛「{vip.currentTitleName || '未填写'}」决定（缺失时显示「贵宾」），颜色与欢迎语由你本人定制。
             </p>
           </div>
         </div>

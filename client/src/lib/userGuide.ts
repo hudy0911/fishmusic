@@ -190,7 +190,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: 'room-vip',
     scope: 'room',
     title: '入房礼花与 VIP 角标',
-    body: '全局贵宾进房：全员可见礼花动画（冷却可个人调整）\n角标名：来自摸鱼岛「currentTitleName」，为空时显示「【贵宾】」\nVIP 设置：在房间顶栏点击「VIP 设置」即可调整角标色 / 欢迎语 / 礼花 / 冷却',
+    body: '全局贵宾进房：全员可见礼花动画（冷却可个人调整）\n角标名：来自摸鱼岛「currentTitleName」，为空时显示「贵宾」\nVIP 设置：在房间顶栏点击「VIP 设置」即可调整角标色 / 欢迎语 / 礼花 / 冷却',
     side: 'bottom',
   },
 ];

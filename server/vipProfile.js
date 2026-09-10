@@ -117,5 +117,5 @@ export async function listVipProfiles({ offset = 0, limit = 20, q = '' } = {}) {
 export function resolveEffectiveVipTitle(profile) {
   if (!profile?.isPermanentVip) return '';
   const title = String(profile.currentTitleName || '').trim();
-  return title || '【贵宾】';
+  return title || '贵宾';
 }

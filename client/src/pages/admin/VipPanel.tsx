@@ -134,7 +134,7 @@ function VipPanel() {
       width: 140,
       render: (_, entry) =>
         entry.isPermanentVip ? (
-          <Tag color="gold">{entry.currentTitleName || '【贵宾】'}</Tag>
+          <Tag color="gold">{entry.currentTitleName || '贵宾'}</Tag>
         ) : (
           <Tag>非永久会员</Tag>
         ),
