@@ -86,7 +86,7 @@ export const useSiteFeaturesStore = create<SiteFeaturesStore>((set) => ({
     vip: vip ? {
       isPermanentVip: Boolean(vip.isPermanentVip),
       currentTitleName: String(vip.currentTitleName || ''),
-      effectiveTitle: String(vip.effectiveTitle || (vip.isPermanentVip ? '【贵宾】' : '')),
+      effectiveTitle: String(vip.effectiveTitle || (vip.isPermanentVip ? '贵宾' : '')),
       refreshedAt: Number(vip.refreshedAt || 0),
     } : { isPermanentVip: false, currentTitleName: '', effectiveTitle: '', refreshedAt: 0 },
   })),
