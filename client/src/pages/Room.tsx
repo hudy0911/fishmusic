@@ -6,7 +6,7 @@ import { mergeFavoriteImportStats } from '../lib/favoriteImport';
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
-import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Flame, Crown, PanelLeftClose } from 'lucide-react';
+import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Crown, PanelLeftClose } from 'lucide-react';
 
 import { searchAllSongs, getAvailableSources, listRooms, type SearchFilterMode } from '../api/music';
 import { importPlaylist, searchPlaylists, type PlaylistSearchItem, type PlaylistPlatform, type PlaylistChannelFilter as PlaylistChannelFilterMode } from '../api/music/playlist';
@@ -587,14 +587,6 @@ export default function Room() {
   }, [roomId]);
 
   const isCreator = Boolean(room?.creatorId && mySocketId && room.creatorId === mySocketId);
-  const songRequestBlockReason = getSongRequestBlockReason(
-    room,
-    isOwner,
-    isAdmin,
-    mySocketId,
-    lastSongRequestAtRef.current,
-    canControlPlayback,
-  );
   const canModerate = isOwner || isAdmin;
   // 普通成员在点歌冷却开启时隐藏批量点歌，房主/管理员不受此限制
   const showBulkAddSong = canModerate || (room?.songRequestCooldownSec ?? 0) <= 0;
