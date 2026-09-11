@@ -9,6 +9,7 @@ import {
   adminResetRoomUserNickname,
   isRedisEnabled,
   setRoomProtectedFromDestroy,
+  setRoomPinned,
   reviewRoomPermanentApplication,
   broadcastAdminSystemMessage,
   getRoomInternal,
@@ -1187,6 +1188,37 @@ export function mountAdminApi(app, {
     audit('set_room_protection', {
       roomId,
       enabled: result.protectedFromDestroy,
+    }, ip);
+    res.json(result);
+  });
+
+  // 置顶房间：PUT 启用置顶（重置置顶时间戳），DELETE 取消置顶
+  app.put('/api/admin/rooms/:id/pin', requireAdminOrigin, requireAdmin, requireAdminSetupComplete, async (req, res) => {
+    const roomId = String(req.params.id || '').toUpperCase();
+    const ip = getClientIp?.(req) || req.ip || '';
+    const result = await setRoomPinned(roomId, true);
+    if (!result.success) {
+      return res.status(result.error === '房间不存在' ? 404 : 503).json({ error: result.error });
+    }
+    audit('set_room_pin', {
+      roomId,
+      pinned: result.pinned,
+      pinnedAt: result.pinnedAt,
+    }, ip);
+    res.json(result);
+  });
+
+  app.delete('/api/admin/rooms/:id/pin', requireAdminOrigin, requireAdmin, requireAdminSetupComplete, async (req, res) => {
+    const roomId = String(req.params.id || '').toUpperCase();
+    const ip = getClientIp?.(req) || req.ip || '';
+    const result = await setRoomPinned(roomId, false);
+    if (!result.success) {
+      return res.status(result.error === '房间不存在' ? 404 : 503).json({ error: result.error });
+    }
+    audit('set_room_pin', {
+      roomId,
+      pinned: result.pinned,
+      pinnedAt: result.pinnedAt,
     }, ip);
     res.json(result);
   });

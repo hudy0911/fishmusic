@@ -12,6 +12,7 @@ import {
   EyeOutlined,
   LogoutOutlined,
   MenuOutlined,
+  PushpinOutlined,
   ReloadOutlined,
   RightOutlined,
   SafetyCertificateOutlined,
@@ -189,6 +190,7 @@ function AdminPage() {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [protectingId, setProtectingId] = useState<string | null>(null);
+  const [pinningId, setPinningId] = useState<string | null>(null);
   const [transferringOwnerKey, setTransferringOwnerKey] = useState<string | null>(null);
   const [permanentReviewingId, setPermanentReviewingId] = useState<string | null>(null);
   const [rejectPermanentRoom, setRejectPermanentRoom] = useState<AdminRoom | null>(null);
@@ -653,6 +655,28 @@ function AdminPage() {
     }
   }, [message, refresh]);
 
+  const toggleRoomPin = useCallback(async (room: AdminRoom) => {
+    const wasPinned = Boolean(room.pinnedAt && room.pinnedAt > 0);
+    setPinningId(room.id);
+    try {
+      const url = `/api/admin/rooms/${room.id}/pin`;
+      const result = await adminFetch<{ pinned: boolean; pinnedAt: number }>(
+        url,
+        { method: wasPinned ? 'DELETE' : 'PUT' },
+      );
+      const nextPinnedAt = wasPinned ? 0 : (result.pinnedAt || Date.now());
+      setRooms((prev) => prev.map((r) => (
+        r.id === room.id ? { ...r, pinnedAt: nextPinnedAt } : r
+      )));
+      message.success(wasPinned ? '已取消房间置顶' : '已置顶房间');
+      await refresh({ force: true });
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '更新房间置顶状态失败');
+    } finally {
+      setPinningId(null);
+    }
+  }, [message, refresh]);
+
   const reviewPermanentApplication = useCallback(async (
     room: AdminRoom,
     approved: boolean,
@@ -963,6 +987,10 @@ function AdminPage() {
     () => rooms.filter((room) => room.permanentApplication?.status === 'pending').length,
     [rooms],
   );
+  const pinnedCount = useMemo(
+    () => rooms.filter((room) => room.pinnedAt && room.pinnedAt > 0).length,
+    [rooms],
+  );
   const reportDebugTabItems = useMemo(
     () => (reportDetail ? buildReportDebugTabItems(reportDetail) : []),
     [reportDetail],
@@ -1202,10 +1230,13 @@ function AdminPage() {
     },
     {
       title: '操作',
-      width: 188,
+      width: 264,
       render: (_, room) => {
         const pending = room.permanentApplication?.status === 'pending';
-        const busy = protectingId === room.id || permanentReviewingId === room.id;
+        const isPinned = Boolean(room.pinnedAt && room.pinnedAt > 0);
+        const busy = protectingId === room.id
+          || pinningId === room.id
+          || permanentReviewingId === room.id;
         return (
           <Space size={6} wrap onClick={(e) => e.stopPropagation()}>
             {pending ? (
@@ -1237,19 +1268,34 @@ function AdminPage() {
                 </Button>
               </>
             ) : (
-              <Button
-                size="small"
-                type={room.protectedFromDestroy ? 'primary' : 'default'}
-                ghost={room.protectedFromDestroy}
-                icon={<SafetyCertificateOutlined />}
-                loading={busy}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void toggleRoomProtection(room);
-                }}
-              >
-                {room.protectedFromDestroy ? '常驻' : '设常驻'}
-              </Button>
+              <>
+                <Button
+                  size="small"
+                  type={room.protectedFromDestroy ? 'primary' : 'default'}
+                  ghost={room.protectedFromDestroy}
+                  icon={<SafetyCertificateOutlined />}
+                  loading={busy}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void toggleRoomProtection(room);
+                  }}
+                >
+                  {room.protectedFromDestroy ? '常驻' : '设常驻'}
+                </Button>
+                <Button
+                  size="small"
+                  type={isPinned ? 'primary' : 'default'}
+                  ghost={isPinned}
+                  icon={<PushpinOutlined rotate={isPinned ? 0 : -45} />}
+                  loading={busy}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void toggleRoomPin(room);
+                  }}
+                >
+                  {isPinned ? '已置顶' : '置顶'}
+                </Button>
+              </>
             )}
             <Popconfirm
               title="解散此房间？"
@@ -1430,6 +1476,12 @@ function AdminPage() {
                   <Badge
                     status="warning"
                     text={`${pendingPermanentCount} 个待审常驻`}
+                  />
+                )}
+                {pinnedCount > 0 && (
+                  <Badge
+                    status="processing"
+                    text={`${pinnedCount} 个房间已置顶`}
                   />
                 )}
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
