@@ -442,9 +442,10 @@ export default function RoomSettingsModal({
       items.push({ id: 'songRequest', label: '点歌' });
     }
     // 非房主仅用于找回身份
-    if (!isOwner && (wechatUinEnabled || linuxdoEnabled || githubEnabled)) {
-      items.push({ id: 'room', label: '身份' });
-    }
+    // if (!isOwner && (wechatUinEnabled || linuxdoEnabled || githubEnabled)) {
+    //   items.push({ id: 'room', label: '身份' });
+    // }
+    void wechatUinEnabled; void linuxdoEnabled; void githubEnabled;
     return items;
   }, [isOwner, canModerate, wechatUinEnabled, linuxdoEnabled, githubEnabled, hasMusicAccountPlatform]);
 
@@ -477,9 +478,11 @@ export default function RoomSettingsModal({
     if (canModerate) {
       initialTabs.push('announcement', 'chat', 'songRequest');
     }
-    if (!isOwner && (identityWechatUinEnabled || identityLinuxdoEnabled || identityGithubEnabled)) {
-      initialTabs.push('room');
-    }
+    // 非房主仅用于找回身份
+    // if (!isOwner && (identityWechatUinEnabled || identityLinuxdoEnabled || identityGithubEnabled)) {
+    //   initialTabs.push('room');
+    // }
+    void identityWechatUinEnabled; void identityLinuxdoEnabled; void identityGithubEnabled;
     setActiveTab(initialTabs[0] ?? 'announcement');
   }, [
     open,

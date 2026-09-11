@@ -6,7 +6,7 @@ import { mergeFavoriteImportStats } from '../lib/favoriteImport';
 
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
-import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Flame, Crown } from 'lucide-react';
+import { Search, Loader2, Check, LogOut, X, Heart, Plus, Download, ListMusic, Upload, History, ListPlus, Pencil, Share2, Lock, LockOpen, ChevronLeft, SlidersHorizontal, Shield, Maximize2, Smartphone, ImagePlus, MoreHorizontal, RefreshCw, Users, Flame, Crown, PanelLeftClose } from 'lucide-react';
 
 import { searchAllSongs, getAvailableSources, listRooms, type SearchFilterMode } from '../api/music';
 import { importPlaylist, searchPlaylists, type PlaylistSearchItem, type PlaylistPlatform, type PlaylistChannelFilter as PlaylistChannelFilterMode } from '../api/music/playlist';
@@ -1474,8 +1474,18 @@ export default function Room() {
   }, [searchDetailOrigin, isPlaylistResults, playlistSearchBackup, handleBackToPlaylistSearch, clearSearchResults]);
 
   const handleAdd = useCallback(async (song: SearchResult) => {
-    if (songRequestBlockReason) {
-      showToast(songRequestBlockReason, 'error');
+    // 必须在每次点击时现算 blockReason：闭包中的 songRequestBlockReason 是基于上次渲染的 ref 值，
+    // 弹窗打开期间若无其它 re-render 触发，ref 不变且字符串不变，会导致弹窗内"等待 N 秒"卡死。
+    const blockReason = getSongRequestBlockReason(
+      useRoomStore.getState().room,
+      isOwner,
+      isAdmin,
+      useRoomStore.getState().mySocketId,
+      lastSongRequestAtRef.current || null,
+      useRoomStore.getState().canControlPlayback,
+    );
+    if (blockReason) {
+      showToast(blockReason, 'error');
       return;
     }
     const key = songKey(song);
@@ -1497,7 +1507,7 @@ export default function Room() {
     } else if (res.error) {
       showToast(res.error, 'error');
     }
-  }, [songRequestBlockReason, addSong, showToast]);
+  }, [addSong, showToast, isOwner, isAdmin]);
 
   const handleListPageResultsChange = useCallback((songs: SearchResult[]) => {
     setListPageSongs(songs);
@@ -2353,8 +2363,20 @@ export default function Room() {
   const searchBar = (
     <div className="flex gap-2 mb-2">
       {!pureMode && (
-        <Tooltip side="bottom" content="搜索类型">
-          <div className="flex flex-shrink-0 overflow-hidden rounded-xl border border-netease-border bg-netease-card p-1 sm:rounded-2xl">
+        <div className="flex flex-shrink-0 overflow-hidden rounded-xl border border-netease-border bg-netease-card p-1 sm:rounded-2xl">
+          {isLgUp && hotPanelCollapsed && (
+            <button
+              key="hot-expand"
+              type="button"
+              onClick={() => setDesktopHotPanelCollapsed(false)}
+              data-guide="room-hot-expand"
+              className="room-hot-collapsed-trigger inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-xs w-12 transition-colors sm:px-3 sm:py-2.5 sm:text-sm sm:w-14 text-netease-muted hover:text-white"
+              aria-label="展开热榜"
+              aria-expanded="false"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          )}
           {([
             ['song', '歌曲'],
             ['playlist', '歌单'],
@@ -2370,8 +2392,7 @@ export default function Room() {
               {label}
             </button>
           ))}
-          </div>
-        </Tooltip>
+        </div>
       )}
       <div className="relative flex-1 min-w-0">
         <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-netease-muted pointer-events-none z-10" />
@@ -3364,19 +3385,7 @@ export default function Room() {
           {/* 左侧：网易热榜 */}
           {isLgUp && !pureMode && (
             hotPanelCollapsed ? (
-              <div className="order-0 flex min-h-0 min-w-0 justify-center lg:h-full" data-guide="room-hot">
-                <Tooltip content="展开热榜" side="right">
-                  <button
-                    type="button"
-                    onClick={() => setDesktopHotPanelCollapsed(false)}
-                    className="room-hot-collapsed-trigger inline-flex h-12 w-12 items-center justify-center rounded-2xl border text-orange-400 transition-[color,background,border-color,transform,box-shadow] hover:-translate-y-0.5 hover:text-orange-300"
-                    aria-label="展开热榜"
-                    aria-expanded="false"
-                  >
-                    <Flame className="h-5 w-5" />
-                  </button>
-                </Tooltip>
-              </div>
+              <div className="order-0 flex min-h-0 min-w-0 lg:h-full" aria-hidden="true" />
             ) : (
               <div
                 data-guide="room-hot"
