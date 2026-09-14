@@ -13,6 +13,7 @@ import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import {
   getGuideSelector,
   getPendingGuideSteps,
+  hasPendingOverflowGuide,
   isGuideScopeCompleted,
   markGuideFeatureUsed,
   markGuideScopeCompleted,
@@ -20,11 +21,14 @@ import {
   setGuideTourActive,
   subscribeGuideFeatureUsed,
   isGuideFeatureUsed,
+  isOverflowGuideFeature,
   type GuideScope,
   type GuideSide,
   type GuideStep,
+  type VipPersonalForGuide,
 } from '../lib/userGuide';
 import { isGuideExternallyPaused, subscribeGuidePause } from '../lib/guidePause';
+import { useSiteFeaturesStore } from '../stores/siteFeaturesStore';
 
 interface Props {
   scope: GuideScope;
@@ -105,7 +109,9 @@ function popoverStyle(anchor: DOMRect, tipW: number, tipH: number, side: GuideSi
 }
 
 function findAnchor(step: GuideStep): HTMLElement | null {
-  const el = document.querySelector(getGuideSelector(step.id));
+  // 步骤可以指定 anchorId 复用另一个步骤的锚点（home/room 共用 VIP 入口时复用）
+  const anchorKey = step.anchorId ?? step.id;
+  const el = document.querySelector(getGuideSelector(anchorKey));
   if (!(el instanceof HTMLElement)) return null;
   const rect = el.getBoundingClientRect();
   if (rect.width < 2 && rect.height < 2) return null;
@@ -122,32 +128,75 @@ export default function UserGuideTour({ scope, paused = false, delayMs = 700 }: 
   const [popoverSize, setPopoverSize] = useState({ w: POPOVER_WIDTH, h: 180 });
   const [externalPaused, setExternalPaused] = useState(() => isGuideExternallyPaused());
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  // 溢出指引的「本次会话已处理」标记：只活到组件卸载/刷新，不进 localStorage，
+  // 这样用户点过完成/跳过之后，本次会话不再弹；刷新或重新打开页面又可重新触发。
+  const overflowDismissedRef = useRef(false);
   const blocked = paused || externalPaused;
   const active = ready && !blocked && steps.length > 0 && index < steps.length;
   const step = active ? steps[index] : null;
+
+  // 仅用于驱动条件性步骤的刷新（如自定义欢迎语超长步骤）：不直接参与渲染。
+  const vipPersonalSignature = useSiteFeaturesStore((s) => {
+    const p = s.vipPersonal;
+    if (!p) return 'none';
+    return `${p.welcomeTemplateId || ''}|${(p.welcomeCustomText || '').length}`;
+  });
 
   useEffect(() => subscribeGuidePause(() => {
     setExternalPaused(isGuideExternallyPaused());
   }), []);
 
   const refreshSteps = useCallback((opts?: { resetIndex?: boolean }) => {
-    if (isGuideScopeCompleted(scope)) {
+    const vipPersonalRaw = useSiteFeaturesStore.getState().vipPersonal;
+    const vipPersonalForGuide: VipPersonalForGuide | null = vipPersonalRaw
+      ? {
+          welcomeTemplateId: vipPersonalRaw.welcomeTemplateId,
+          welcomeCustomText: vipPersonalRaw.welcomeCustomText || '',
+          isPermanentVip: useSiteFeaturesStore.getState().vip.isPermanentVip,
+        }
+      : null;
+    // 溢出指引（老用户历史超长欢迎语）只活到本次会话，不写 localStorage；
+    // 本次会话已确认（点过完成/跳过）就不再让它冒出来；刷新或重新打开则随 ref 重置。
+    const overflowActive = hasPendingOverflowGuide(scope, { vipPersonal: vipPersonalForGuide })
+      && !overflowDismissedRef.current;
+    if (!overflowActive && isGuideScopeCompleted(scope)) {
       setSteps([]);
       return;
     }
-    const rawPending = getPendingGuideSteps(scope, { isDesktop: isDesktopWidth() });
-    if (rawPending.length === 0) {
+    const rawPending = getPendingGuideSteps(scope, { isDesktop: isDesktopWidth(), vipPersonal: vipPersonalForGuide });
+    const pending = overflowDismissedRef.current
+      ? rawPending.filter((s) => !isOverflowGuideFeature(s.id))
+      : rawPending;
+    if (pending.length === 0) {
+      // 房间里所有非条件性步骤都已用完，且没有条件性步骤待展示 → 标记 scope 完成
       markGuideScopeCompleted(scope);
       setSteps([]);
       return;
     }
     // 不在开场时按锚点过滤：房间卡片等可能稍后才挂载，过滤掉就永远出不来
-    setSteps(rawPending);
+    setSteps(pending);
     if (opts?.resetIndex !== false) setIndex(0);
   }, [scope]);
 
+  // vipPersonal 变化时（如保存设置后长度变化）重新评估步骤列表；条件性步骤会随之自动出现 / 消失
   useEffect(() => {
-    if (blocked || isGuideScopeCompleted(scope)) return;
+    refreshSteps({ resetIndex: false });
+  }, [refreshSteps, vipPersonalSignature]);
+
+  useEffect(() => {
+    if (blocked) return;
+    const vipPersonalRaw = useSiteFeaturesStore.getState().vipPersonal;
+    const vipPersonalForGuide: VipPersonalForGuide | null = vipPersonalRaw
+      ? {
+          welcomeTemplateId: vipPersonalRaw.welcomeTemplateId,
+          welcomeCustomText: vipPersonalRaw.welcomeCustomText || '',
+          isPermanentVip: useSiteFeaturesStore.getState().vip.isPermanentVip,
+        }
+      : null;
+    // 溢出指引不受 scope 跳过逻辑约束
+    const overflowActive = hasPendingOverflowGuide(scope, { vipPersonal: vipPersonalForGuide })
+      && !overflowDismissedRef.current;
+    if (!overflowActive && isGuideScopeCompleted(scope)) return;
     // 已开过指引、只是被更新弹窗打断：恢复即可，不重置进度
     if (ready && steps.length > 0) return;
     const timer = window.setTimeout(() => {
@@ -175,15 +224,30 @@ export default function UserGuideTour({ scope, paused = false, delayMs = 700 }: 
   }, [scope, steps.length]);
 
   const advance = useCallback(() => {
-    // 静默记已用，避免再触发 subscribe → goNext 造成「隔一步跳过」
-    if (step) markGuideFeatureUsed(step.id, { emit: false });
+    if (!step) {
+      goNext();
+      return;
+    }
+    // 溢出指引：只在本会话屏蔽，不进 localStorage，避免刷新后没法再次提示。
+    if (isOverflowGuideFeature(step.id)) {
+      overflowDismissedRef.current = true;
+      markGuideScopeCompleted(scope);
+      setSteps([]);
+      return;
+    }
+    // 普通指引：静默记已用，避免再触发 subscribe → goNext 造成「隔一步跳过」
+    markGuideFeatureUsed(step.id, { emit: false });
     goNext();
-  }, [step, goNext]);
+  }, [step, goNext, scope]);
 
   const skipAll = useCallback(() => {
+    // 溢出指引同样只在本会话屏蔽，刷新/重新打开仍会按数据条件重新提示
+    if (step && isOverflowGuideFeature(step.id)) {
+      overflowDismissedRef.current = true;
+    }
     markGuideSkipped();
     setSteps([]);
-  }, []);
+  }, [step]);
 
   useEffect(() => {
     if (!active || !step) return;
@@ -195,6 +259,8 @@ export default function UserGuideTour({ scope, paused = false, delayMs = 700 }: 
   // 弹窗暂停期间点过当前功能：恢复后直接进入下一步
   useEffect(() => {
     if (!active || !step) return;
+    // 溢出指引是给老用户的一次性修复提示，「老用户跳过」状态不视为「已用」，避免一进入就被自动推进
+    if (isOverflowGuideFeature(step.id)) return;
     if (isGuideFeatureUsed(step.id)) goNext();
   }, [active, step, goNext]);
 

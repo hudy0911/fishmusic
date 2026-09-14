@@ -3343,7 +3343,7 @@ export default function Room() {
                   <button
                     type="button"
                     onClick={() => navigate('/vip-settings')}
-                    data-guide="room-vip"
+                    data-guide="room-vip room-vip-welcome-overflow"
                     className="flex items-center gap-1.5 text-xs text-amber-300 hover:text-amber-200 transition-colors px-2.5 sm:px-3 py-1.5 rounded-lg hover:bg-netease-card"
                     aria-label="VIP 设置"
                   >

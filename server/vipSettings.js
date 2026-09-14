@@ -6,7 +6,8 @@ import { getRedisClient, isRedisEnabled } from './roomStorage.js';
 const VIP_SETTINGS_PREFIX = 'openmusic:vip:settings:';
 const MAX_COLOR_LENGTH = 16;
 const MAX_TEMPLATE_ID_LENGTH = 32;
-const MAX_CUSTOM_TEXT_LENGTH = 200;
+// 自定义欢迎语上限：用户保存时服务端会截断；读取时返回原始长度，便于前端检测历史超长数据并引导用户修改。
+const MAX_CUSTOM_TEXT_LENGTH = 50;
 
 const ALLOWED_TEMPLATE_IDS = new Set([
   'none',
@@ -62,7 +63,7 @@ export function normalizeVipPersonalSettings(input) {
     borderColor: normalizeNullableColor(input.borderColor),
     welcomeEnabled: normalizeNullableBoolean(input.welcomeEnabled),
     welcomeTemplateId: normalizeNullableTemplateId(input.welcomeTemplateId),
-    welcomeCustomText: clampString(input.welcomeCustomText, MAX_CUSTOM_TEXT_LENGTH),
+    welcomeCustomText: String(input.welcomeCustomText != null ? input.welcomeCustomText : '').trim(),
     confettiEnabled: normalizeNullableBoolean(input.confettiEnabled),
     updatedAt: Number(input.updatedAt) || Date.now(),
   };
@@ -86,7 +87,12 @@ export async function getVipPersonalSettings(userId) {
 export async function saveVipPersonalSettings(userId, payload) {
   const id = String(userId || '').trim();
   if (!id) return { success: false, error: 'userId 不能为空' };
-  const next = normalizeVipPersonalSettings({ ...payload, updatedAt: Date.now() });
+  // 写入前强制截断欢迎语，避免历史长内容污染 Redis；读取端保留原始长度用于前端检测超长。
+  const safePayload = {
+    ...payload,
+    welcomeCustomText: String(payload?.welcomeCustomText || '').trim().slice(0, MAX_CUSTOM_TEXT_LENGTH),
+  };
+  const next = normalizeVipPersonalSettings({ ...safePayload, updatedAt: Date.now() });
   const client = getRedisClient();
   if (!isRedisEnabled() || !client) return { success: false, error: 'Redis 不可用，VIP 设置未持久化' };
   try {

@@ -3,6 +3,7 @@ import { ReloadOutlined, SaveOutlined } from '@ant-design/icons';
 import { App, Button, Card, Form, Input, Select, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import AdminLoading from './AdminLoading';
+import { VIP_CUSTOM_TEXT_MAX_LENGTH } from '../../lib/memberTierPresets';
 import type { VipGlobalConfig, VipUserEntry } from './types';
 import { adminFetch, formatAuditTime } from './utils';
 
@@ -231,14 +232,22 @@ function VipPanel() {
               />
             </Form.Item>
           </Space>
-          <Form.Item label="自定义欢迎语文案（模板选「自定义」时生效）" style={{ marginBottom: 0 }}>
-            <Input
-              value={configDraft?.welcomeCustomText}
-              onChange={(e) => setConfigDraft((prev) => (prev ? { ...prev, welcomeCustomText: e.target.value } : prev))}
-              placeholder="例：欢迎 {nickname} 大驾光临 {badge} 房间～  （{nickname}=进房人昵称，{badge}=VIP 称号）"
-              maxLength={200}
-              style={{ maxWidth: 480 }}
-            />
+          <Form.Item
+            label={`自定义欢迎语文案（模板选「自定义」时生效，最多 ${VIP_CUSTOM_TEXT_MAX_LENGTH} 字）`}
+            style={{ marginBottom: 0 }}
+          >
+            <div>
+              <Input
+                value={configDraft?.welcomeCustomText}
+                onChange={(e) => setConfigDraft((prev) => (prev ? { ...prev, welcomeCustomText: e.target.value } : prev))}
+                placeholder="例：欢迎 {nickname} 大驾光临 {badge} 房间～  （{nickname}=进房人昵称，{badge}=VIP 称号）"
+                maxLength={VIP_CUSTOM_TEXT_MAX_LENGTH}
+                style={{ maxWidth: 480 }}
+              />
+              <div style={{ marginTop: 4, fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+                {(configDraft?.welcomeCustomText || '').length} / {VIP_CUSTOM_TEXT_MAX_LENGTH}
+              </div>
+            </div>
           </Form.Item>
         </Form>
         <div style={{ marginTop: 16 }}>

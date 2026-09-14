@@ -22,6 +22,13 @@ export const MEMBER_FRAME_GLOW = {
   innerMix: 10,  // 向内晕染范围（%），越小越淡
 } as const;
 
+/**
+ * 自定义欢迎语模板字符上限。
+ * - 前端输入框 maxLength 与服务端 vipSettings.js / vipWelcome.js 共享此值；
+ * - 用户保存时服务端会截断；超长历史数据会在 VipSettings 页以红字横幅提示并引导修改。
+ */
+export const VIP_CUSTOM_TEXT_MAX_LENGTH = 50;
+
 /** 兼容旧数据，边框仅使用颜色，固定 style id */
 export const MEMBER_BORDER_STYLE_ID = 'solid';
 
@@ -210,7 +217,7 @@ export function resolveMemberWelcomeSettings(
     welcomeTemplateId,
     welcomeCustomText: String(
       tier!.welcomeCustomText != null ? tier!.welcomeCustomText : room.welcomeCustomText || '',
-    ).slice(0, 200),
+    ).slice(0, VIP_CUSTOM_TEXT_MAX_LENGTH),
     // 旧数据无 confetti 字段时：有欢迎语则默认放礼花
     confettiEnabled: tier!.confettiEnabled != null
       ? Boolean(tier!.confettiEnabled)
@@ -236,10 +243,6 @@ export function getMemberBadgeStyle(color: string): CSSProperties {
     color,
     ['--member-badge-color' as string]: color,
   };
-}
-
-export function normalizeBorderStyleId(_styleId?: string): string {
-  return MEMBER_BORDER_STYLE_ID;
 }
 
 export function normalizeWelcomeTemplateId(templateId: string | undefined): string {

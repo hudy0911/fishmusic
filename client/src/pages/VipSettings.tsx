@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Save, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Crown, Save, ArrowLeft } from 'lucide-react';
 import { fetchWithTimeout } from '../api/http';
 import { useSiteFeaturesStore, type UserVipPersonalSettings } from '../stores/siteFeaturesStore';
 import {
   BADGE_COLOR_PRESETS,
+  VIP_CUSTOM_TEXT_MAX_LENGTH,
   WELCOME_TEMPLATE_PRESETS,
   buildWelcomeText,
   getMemberBadgeStyle,
@@ -128,6 +129,10 @@ export default function VipSettingsPage() {
   const welcomeTemplateId = draft.welcomeTemplateId || defaults.welcomeTemplateId;
   const welcomeCustomText = draft.welcomeCustomText || defaults.welcomeCustomText;
   const confettiEnabled = draft.confettiEnabled === null ? defaults.confettiEnabled : draft.confettiEnabled;
+  // 只在「自定义模板 + 实际使用文本超长」时给出红字提示，非自定义模板即使 draft 中残留了旧文本也不打扰用户。
+  const isCustomTemplate = welcomeTemplateId === 'custom';
+  const welcomeCustomTextLen = (welcomeCustomText || '').length;
+  const welcomeCustomTextOverLimit = isCustomTemplate && welcomeCustomTextLen > VIP_CUSTOM_TEXT_MAX_LENGTH;
 
   const previewBadge = vip.effectiveTitle || '贵宾';
   const previewText = welcomeEnabled ? buildWelcomeText(welcomeTemplateId, welcomeCustomText, previewBadge, nickname || '贵宾') : '';
@@ -309,15 +314,29 @@ export default function VipSettingsPage() {
                   <option key={preset.id} value={preset.id}>{preset.name}</option>
                 ))}
               </select>
-              {welcomeTemplateId === 'custom' && (
-                <textarea
-                  rows={2}
-                  maxLength={200}
-                  value={welcomeCustomText}
-                  onChange={(e) => setDraft((prev) => prev ? { ...prev, welcomeCustomText: e.target.value } : prev)}
-                  placeholder="例：欢迎 {nickname} 大驾光临 {badge} 房间～  （{nickname}=进房人昵称，{badge}=VIP 称号）"
-                  className="mt-2 w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm"
-                />
+              {isCustomTemplate && (
+                <div className="mt-2">
+                  {welcomeCustomTextOverLimit && (
+                    <div className="mb-2 flex items-start gap-2 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <div className="leading-5">
+                        你的欢迎语超过 {VIP_CUSTOM_TEXT_MAX_LENGTH} 字上限（当前 {welcomeCustomTextLen} 字），保存时会被自动截断。
+                        请精简文案后保存，以保证进房欢迎语完整可读。
+                      </div>
+                    </div>
+                  )}
+                  <textarea
+                    rows={2}
+                    maxLength={VIP_CUSTOM_TEXT_MAX_LENGTH}
+                    value={welcomeCustomText}
+                    onChange={(e) => setDraft((prev) => prev ? { ...prev, welcomeCustomText: e.target.value } : prev)}
+                    placeholder="例：欢迎 {nickname} 大驾光临 {badge} 房间～  （{nickname}=进房人昵称，{badge}=VIP 称号）"
+                    className={`w-full bg-black/40 border rounded-lg px-3 py-2 text-sm ${welcomeCustomTextOverLimit ? 'border-rose-500/50' : 'border-white/10'}`}
+                  />
+                  <div className={`mt-1 text-right text-xs ${welcomeCustomTextOverLimit ? 'text-rose-300' : 'text-white/40'}`}>
+                    {welcomeCustomTextLen} / {VIP_CUSTOM_TEXT_MAX_LENGTH}
+                  </div>
+                </div>
               )}
             </div>
 
