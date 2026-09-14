@@ -14,6 +14,7 @@ export type GuideFeatureId =
   | 'home-join'
   | 'home-lobby'
   | 'home-vip'
+  | 'home-vip-welcome-overflow'
   | 'room-search'
   | 'room-hot'
   | 'room-queue'
@@ -22,7 +23,8 @@ export type GuideFeatureId =
   | 'room-player'
   | 'room-desktop-lyrics'
   | 'room-report'
-  | 'room-vip';
+  | 'room-vip'
+  | 'room-vip-welcome-overflow';
 
 export type GuideScope = 'home' | 'room';
 
@@ -36,6 +38,16 @@ export interface GuideStep {
   side?: GuideSide;
   /** 桌面宽屏才有意义的步骤（如侧栏热榜） */
   desktopOnly?: boolean;
+  /** 步骤在画面上指向哪个锚点；缺省时使用步骤 id 自身。复用锚点（如同一个 VIP 入口在 home / room 共用）时使用 */
+  anchorId?: GuideFeatureId;
+}
+
+/** 运行时当前用户的 VIP 个人设置；用于判断条件性步骤（如「欢迎语超长」）是否应该展示。 */
+export interface VipPersonalForGuide {
+  welcomeTemplateId: string | null;
+  welcomeCustomText: string;
+  /** 是否永久贵宾：非永久贵宾不会保存自定义欢迎语，但仍要在创建步骤时保护 */
+  isPermanentVip?: boolean;
 }
 
 interface GuideState {
@@ -59,6 +71,7 @@ const ALL_FEATURE_IDS: GuideFeatureId[] = [
   'home-join',
   'home-lobby',
   'home-vip',
+  'home-vip-welcome-overflow',
   'room-search',
   'room-hot',
   'room-queue',
@@ -68,6 +81,7 @@ const ALL_FEATURE_IDS: GuideFeatureId[] = [
   'room-desktop-lyrics',
   'room-report',
   'room-vip',
+  'room-vip-welcome-overflow',
 ];
 
 /** 旧版细粒度 id → 合并后的步骤 */
@@ -126,7 +140,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: 'home-vip',
     scope: 'home',
     title: 'VIP 样式设置',
-    body: '摸鱼岛永久贵宾：顶部出现「VIP 设置」按钮\n角标颜色 / 边框颜色 / 欢迎语 / 礼花 / 冷却：由你本人定制，回退后台默认',
+    body: '摸鱼岛永久贵宾：顶部出现「VIP 设置」按钮\n角标颜色 / 边框颜色 / 欢迎语 / 礼花 / 冷却：由你本人定制，回退后台默认\n自定义欢迎语上限 50 字；之前设置超过 50 字的，进设置页会有红字提示，保存时会自动截断',
     side: 'bottom',
   },
   {
@@ -193,6 +207,22 @@ export const GUIDE_STEPS: GuideStep[] = [
     body: '全局贵宾进房：全员可见礼花动画（冷却可个人调整）\n角标名：来自摸鱼岛「currentTitleName」，为空时显示「贵宾」\nVIP 设置：在房间顶栏点击「VIP 设置」即可调整角标色 / 欢迎语 / 礼花 / 冷却',
     side: 'bottom',
   },
+  {
+    id: 'home-vip-welcome-overflow',
+    scope: 'home',
+    title: '自定义欢迎语已超限',
+    body: '欢迎语：你之前保存的自定义欢迎语超过 50 字上限，当前进房时显示的是服务端截断后的版本\n精简文案：在「VIP 设置」中改为不超过 50 字并保存，即可恢复完整欢迎语\n入口：顶栏的「VIP 设置」按钮',
+    side: 'bottom',
+    anchorId: 'home-vip',
+  },
+  {
+    id: 'room-vip-welcome-overflow',
+    scope: 'room',
+    title: '自定义欢迎语已超限',
+    body: '欢迎语：你之前保存的自定义欢迎语超过 50 字上限，当前进房时显示的是服务端截断后的版本\n精简文案：在「VIP 设置」中改为不超过 50 字并保存，即可恢复完整欢迎语\n入口：房间顶栏的「VIP 设置」按钮',
+    side: 'bottom',
+    anchorId: 'room-vip',
+  },
 ];
 
 function emptyState(): GuideState {
@@ -204,10 +234,21 @@ function emptyState(): GuideState {
   };
 }
 
+/** 将空格分隔的多值 id 字符串拆解后依次标记，常用于一个 DOM 元素需要同时触发多个指引步骤的场景 */
+export function markGuideFeatureUsedBulk(ids: string): void {
+  const parts = ids.trim().split(/\s+/);
+  for (const part of parts) {
+    markGuideFeatureUsed(normalizeFeatureId(part) as GuideFeatureId);
+  }
+}
+
 function normalizeFeatureId(id: unknown): GuideFeatureId | null {
   if (typeof id !== 'string') return null;
-  if (ALL_FEATURE_IDS.includes(id as GuideFeatureId)) return id as GuideFeatureId;
-  return LEGACY_FEATURE_MAP[id] ?? null;
+  // 支持空格分隔多值（如 "home-vip home-vip-welcome-overflow"）
+  const first = id.trim().split(/\s+/)[0];
+  if (!first) return null;
+  if (ALL_FEATURE_IDS.includes(first as GuideFeatureId)) return first as GuideFeatureId;
+  return LEGACY_FEATURE_MAP[first] ?? null;
 }
 
 function normalizeScopes(scopes: unknown): GuideScope[] {
@@ -376,6 +417,30 @@ export function isGuideScopeCompleted(scope: GuideScope): boolean {
   return state.skipped || state.completedScopes.includes(scope);
 }
 
+/** 判断当前是否有针对老用户历史超长欢迎语的修复指引待展示；不受「老用户跳过」逻辑影响 */
+export function hasPendingOverflowGuide(
+  scope: GuideScope,
+  opts?: { vipPersonal?: VipPersonalForGuide | null },
+): boolean {
+  const state = getGuideState();
+  const used = new Set(state.used);
+  const p = opts?.vipPersonal;
+  if (!p) return false;
+  if (p.welcomeTemplateId !== 'custom') return false;
+  if (!p.welcomeCustomText || p.welcomeCustomText.length <= 50) return false;
+  return GUIDE_STEPS.some((s) => isOverflowGuideFeature(s.id) && s.scope === scope && !used.has(s.id));
+}
+
+/** 溢出指引 ID 列表（针对老用户历史超长欢迎语的修复指引，不受「老用户跳过」逻辑影响） */
+const OVERFLOW_GUIDE_IDS: ReadonlySet<GuideFeatureId> = new Set([
+  'home-vip-welcome-overflow',
+  'room-vip-welcome-overflow',
+]);
+
+export function isOverflowGuideFeature(id: GuideFeatureId): boolean {
+  return OVERFLOW_GUIDE_IDS.has(id);
+}
+
 export function isGuideFeatureUsed(id: GuideFeatureId): boolean {
   const state = getGuideState();
   return state.skipped || state.used.includes(id);
@@ -418,16 +483,37 @@ export function markGuideFeatureUsed(
 }
 
 export function getGuideSelector(id: GuideFeatureId): string {
-  return `[data-guide="${id}"]`;
+  // data-guide 属性可能用空格分隔多个指引 ID（如 "home-vip home-vip-welcome-overflow"），
+  // 使用 ~= 按空白词匹配，避免「锚点找不到」导致 step 静默跳过
+  return `[data-guide~="${id}"]`;
 }
 
-export function getPendingGuideSteps(scope: GuideScope, opts?: { isDesktop?: boolean }): GuideStep[] {
+export function getPendingGuideSteps(
+  scope: GuideScope,
+  opts?: { isDesktop?: boolean; vipPersonal?: VipPersonalForGuide | null },
+): GuideStep[] {
   const state = getGuideState();
-  if (state.skipped || state.completedScopes.includes(scope)) return [];
   const used = new Set(state.used);
   const isDesktop = opts?.isDesktop ?? (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+
+  // vip-welcome-overflow 是针对老用户历史超长数据的修复指引，不受「老用户跳过」逻辑影响，始终按数据条件展示
+  const overflowSteps = GUIDE_STEPS.filter((step) => {
+    if (step.scope !== scope) return false;
+    if (!isOverflowGuideFeature(step.id)) return false;
+    if (used.has(step.id)) return false;
+    const p = opts?.vipPersonal;
+    if (!p) return false;
+    if (p.welcomeTemplateId !== 'custom') return false;
+    if (!p.welcomeCustomText || p.welcomeCustomText.length <= 50) return false;
+    return true;
+  });
+  if (overflowSteps.length > 0) return overflowSteps;
+
+  // 普通指引受老用户跳过逻辑约束
+  if (state.skipped || state.completedScopes.includes(scope)) return [];
   return GUIDE_STEPS.filter((step) => {
     if (step.scope !== scope) return false;
+    if (isOverflowGuideFeature(step.id)) return false;
     if (used.has(step.id)) return false;
     if (step.desktopOnly && !isDesktop) return false;
     return true;
@@ -458,8 +544,8 @@ export function installGuideUsageTracking(): void {
       if (!(target instanceof Element)) return;
       const el = target.closest('[data-guide]');
       if (!el) return;
-      const id = normalizeFeatureId(el.getAttribute('data-guide'));
-      if (id) markGuideFeatureUsed(id);
+      // 支持空格分隔多值，一次性标记多个指引步骤（如 "home-vip home-vip-welcome-overflow"）
+      markGuideFeatureUsedBulk(el.getAttribute('data-guide') || '');
     },
     true,
   );

@@ -471,7 +471,7 @@ export function normalizeVipGlobalDefaults(input) {
     borderColor: normalizeVipColor(src.borderColor, VIP_DEFAULT_BORDER_COLOR),
     welcomeEnabled: src.welcomeEnabled !== false,
     welcomeTemplateId: normalizeVipTemplate(src.welcomeTemplateId, VIP_DEFAULT_TEMPLATE),
-    welcomeCustomText: String(src.welcomeCustomText || '').trim().slice(0, 200),
+    welcomeCustomText: String(src.welcomeCustomText || '').trim().slice(0, 50),
     confettiEnabled: src.confettiEnabled !== false,
     welcomeCooldownSec: normalizeVipCooldown(src.welcomeCooldownSec, VIP_DEFAULT_COOLDOWN_SEC),
   };

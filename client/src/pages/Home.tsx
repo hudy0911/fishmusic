@@ -772,7 +772,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => navigate('/vip-settings')}
-                    data-guide="home-vip"
+                    data-guide="home-vip home-vip-welcome-overflow"
                     className={`hidden sm:inline-flex ${headerIconCls}`}
                     aria-label="VIP 设置"
                   >

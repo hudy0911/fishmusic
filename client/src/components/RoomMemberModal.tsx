@@ -6,6 +6,7 @@ import {
   BADGE_LABEL_PRESETS,
   DEFAULT_MEMBER_TIER,
   MEMBER_BORDER_STYLE_ID,
+  VIP_CUSTOM_TEXT_MAX_LENGTH,
   WELCOME_COOLDOWN_MINUTE_OPTIONS,
   WELCOME_TEMPLATE_PRESETS,
   getSelectableBadgeColorPresets,
@@ -238,7 +239,7 @@ export default function RoomMemberModal({
       borderColor: normalizeBadgeColor(draft.borderColor),
       welcomeEnabled: templateId !== 'none',
       welcomeTemplateId: templateId,
-      welcomeCustomText: (draft.welcomeCustomText || '').trim().slice(0, 200),
+      welcomeCustomText: (draft.welcomeCustomText || '').trim().slice(0, VIP_CUSTOM_TEXT_MAX_LENGTH),
       confettiEnabled: Boolean(draft.confettiEnabled),
       welcomeCooldownSec: normalizeWelcomeCooldownSec(draft.welcomeCooldownSec),
     });
@@ -496,8 +497,9 @@ export default function RoomMemberModal({
                             disabled={!canEditSelected}
                             onChange={(event) => setDraft((prev) => ({
                               ...prev,
-                              welcomeCustomText: event.target.value.slice(0, 200),
+                              welcomeCustomText: event.target.value.slice(0, VIP_CUSTOM_TEXT_MAX_LENGTH),
                             }))}
+                            maxLength={VIP_CUSTOM_TEXT_MAX_LENGTH}
                             rows={3}
                             placeholder="自定义欢迎语，例如：欢迎 {badge} {nickname} 回家"
                             className="w-full resize-none rounded-xl border border-netease-border/50 bg-netease-card px-3 py-2 text-sm text-white outline-none placeholder:text-netease-muted/50 focus:border-amber-400/35"

@@ -25,7 +25,9 @@ const TEMPLATES = {
 };
 
 const MAX_WELCOME_LENGTH = 500;
-const MAX_CUSTOM_TEXT_LENGTH = 200;
+// 自定义欢迎语模板替换后的总长度上限
+// MAX_CUSTOM_TEXT_LENGTH 与 vipSettings.js / VipSettings.tsx 保持一致，超出时渲染截断 + 引导用户修改。
+const MAX_CUSTOM_TEXT_LENGTH = 50;
 
 function pick(value, fallback) {
   return value === null || value === undefined ? fallback : value;
